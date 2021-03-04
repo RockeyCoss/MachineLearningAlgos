@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<perceptron>
+    <featureTransform>hogFeature</featureTransform>
+    <labelTransform>perceptronLabelTransform</labelTransform>
+</perceptron>

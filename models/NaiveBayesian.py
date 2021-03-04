@@ -11,7 +11,7 @@ class NaiveBayesian(ModelBaseClass):
         self.lambdaPara=1
         self.classNum=10
         self.featureNum=28*28
-        self.featurePossibleValueNum=256
+        self.featurePossibleValueNum=2
         self.Py=None
         self.Pxy=None
     def train(self, features, labels, *args, **dicts):
@@ -29,7 +29,7 @@ class NaiveBayesian(ModelBaseClass):
             for featureIndex in range(features.shape[1]):
                 PxyList[labels[sampleIndex],featureIndex,features[sampleIndex,featureIndex]]+=1
         for aLabelIndex in range(PxyList.shape[0]):
-            PxyList[aLabelIndex,:,:]=(PxyList[aLabelIndex,:,:]+self.lambdaPara)/(labelCount[aLabel]+self.featurePossibleValueNum*self.lambdaPara)
+            PxyList[aLabelIndex,:,:]=(PxyList[aLabelIndex,:,:]+self.lambdaPara)/(labelCount[aLabelIndex]+self.featurePossibleValueNum*self.lambdaPara)
 
         PyList=np.log(PyList)
         PxyList=np.log(PxyList)

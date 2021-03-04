@@ -16,6 +16,12 @@ def hogFeature(data):
     features=features.reshape(features.shape[0:2])
     return features
 
+def binaryFeature(data):
+    data[np.where(data<=127.5)]=0
+    data[np.where(data>127.5)]=1
+    return data
+
+
 #label transforms
 def perceptronLabelTransform(labels):
     labels[np.where(labels != 1)] = -1

@@ -1,4 +1,5 @@
 import json
+import os
 class ModelBaseClass:
     def train(self, features, labels, *args, **dicts):
         """
@@ -25,6 +26,8 @@ class ModelBaseClass:
         :param para: parameters dict
         :return:None
         """
+        if not os.path.exists(f"../parameters"):
+            os.mkdir("../parameters")
         with open(f"../parameters/{self.__class__.__name__}Para.json", "w") as f:
             json.dump(para, f, indent=4)
 
@@ -33,9 +36,14 @@ class ModelBaseClass:
         load the saved parameters json file
         :return: None
         """
-        with open(f"../parameters/{self.__class__.__name__}Para.json", "r") as f:
-            para = json.load(f)
-        return para
+        try:
+            with open(f"../parameters/{self.__class__.__name__}Para.json", "r") as f:
+                para = json.load(f)
+        except:
+            print("Parameters loading error")
+            para=None
+        finally:
+            return para
 
     def loadPara(self):
         """

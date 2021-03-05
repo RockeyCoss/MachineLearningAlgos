@@ -1,6 +1,6 @@
 import numpy as np
 from models import ModelBaseClass
-from utilities import BFGSAlgo
+from utilities import BFGSAlgo,loadConfigWithName
 
 
 # Remember that for logistic model, the label yi is either 0 or 1, not -1 or 1!
@@ -8,27 +8,73 @@ class Logistic(ModelBaseClass):
     def __init__(self):
         self.w = None
 
-    def train(self, features, labels, *args, **dicts):
-        def f(w):
-            wxi = np.sum(w.reshape(-1, ) * features, axis=1)
+    def f(self,w,features,labels):
+        wxi = np.sum(w.reshape(-1, ) * features, axis=1)
+        if np.max(wxi)>70:
+            resultBlock = labels * wxi - wxi
+        else:
             resultBlock = labels * wxi - np.log(1 + np.exp(wxi))
-            assert len(resultBlock.shape)==1
-            result = np.sum(resultBlock)
-            return -1 * result
+        assert len(resultBlock.shape)==1
+        result = np.sum(resultBlock)
+        return -1 * result
 
-        def g(w):
-            # refer to the note on page 117
-            YiXij = labels.reshape(-1, 1) * features
-            WjXij = w * features
-            expWXi = np.exp(np.sum(WjXij, axis=1)).reshape(-1, 1)
-            rightSide = (features * expWXi) / (1 + expWXi)
-            beforeSummation = rightSide - YiXij  # for finding minimum, need to minus the result
-            result = np.sum(beforeSummation, axis=0)
-            #由于早期错误严重，梯度可能会非常大，因此需要截断
-            return result
+    def g(self,w,features,labels):
+        # refer to the note on page 117
+        YiXij = labels.reshape(-1, 1) * features
+        WjXij = w * features
+        expWXi = np.exp(np.sum(WjXij, axis=1)).reshape(-1, 1)
+        rightSide = (features * expWXi) / (1 + expWXi)
+        beforeSummation = rightSide - YiXij  # for finding minimum, need to minus the result
+        result = np.sum(beforeSummation, axis=0)
+        return result
 
-        optimizedW = BFGSAlgo(f, g, features.shape[1])
-        self.save(optimizedW.tolist())
+
+
+    def train(self, features, labels, *args, **dicts):
+        learningRate=float(loadConfigWithName("LogisticConfig","learningRate"))
+        batchSize=int(loadConfigWithName("LogisticConfig","batchSize"))
+        batchNum=features.shape[0]//batchSize+1 if features.shape[0]%batchSize!=0 else features.shape[0]//batchSize
+        threshhold=float(loadConfigWithName("LogisticConfig","threshold"))
+
+        w=np.random.rand(features.shape[1])
+        while True:
+            print(np.linalg.norm(self.g(w,features,labels)))
+            if np.linalg.norm(self.g(w,features,labels))<threshhold:
+                self.save(w.tolist())
+                return
+            for batchIndex in range(batchNum):
+                startIndex=batchIndex*batchSize
+                endIndex=startIndex+batchSize
+                batchFeatures=features[startIndex:endIndex,:]
+                batchLabel=labels[startIndex:endIndex]
+                grad=self.g(w,batchFeatures,batchLabel)
+
+                w=w-learningRate*grad
+
+    # def train(self, features, labels, *args, **dicts):
+    #     def f(w):
+    #         wxi = np.sum(w.reshape(-1, ) * features, axis=1)
+    #         if np.max(wxi)>70:
+    #             resultBlock = labels * wxi - wxi
+    #         else:
+    #             resultBlock = labels * wxi - np.log(1 + np.exp(wxi))
+    #         assert len(resultBlock.shape)==1
+    #         result = np.sum(resultBlock)
+    #         return -1 * result
+    #
+    #     def g(w):
+    #         # refer to the note on page 117
+    #         YiXij = labels.reshape(-1, 1) * features
+    #         WjXij = w * features
+    #         expWXi = np.exp(np.sum(WjXij, axis=1)).reshape(-1, 1)
+    #         rightSide = (features * expWXi) / (1 + expWXi)
+    #         beforeSummation = rightSide - YiXij  # for finding minimum, need to minus the result
+    #         result = np.sum(beforeSummation, axis=0)
+    #         #由于早期错误严重，梯度可能会非常大，因此需要截断
+    #         return result
+    #
+    #     optimizedW = BFGSAlgo(f, g, features.shape[1])
+    #     self.save(optimizedW.tolist())
 
     def predict(self, features):
         self.loadPara()

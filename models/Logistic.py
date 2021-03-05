@@ -51,30 +51,7 @@ class Logistic(ModelBaseClass):
 
                 w=w-learningRate*grad
 
-    # def train(self, features, labels, *args, **dicts):
-    #     def f(w):
-    #         wxi = np.sum(w.reshape(-1, ) * features, axis=1)
-    #         if np.max(wxi)>70:
-    #             resultBlock = labels * wxi - wxi
-    #         else:
-    #             resultBlock = labels * wxi - np.log(1 + np.exp(wxi))
-    #         assert len(resultBlock.shape)==1
-    #         result = np.sum(resultBlock)
-    #         return -1 * result
-    #
-    #     def g(w):
-    #         # refer to the note on page 117
-    #         YiXij = labels.reshape(-1, 1) * features
-    #         WjXij = w * features
-    #         expWXi = np.exp(np.sum(WjXij, axis=1)).reshape(-1, 1)
-    #         rightSide = (features * expWXi) / (1 + expWXi)
-    #         beforeSummation = rightSide - YiXij  # for finding minimum, need to minus the result
-    #         result = np.sum(beforeSummation, axis=0)
-    #         #由于早期错误严重，梯度可能会非常大，因此需要截断
-    #         return result
-    #
-    #     optimizedW = BFGSAlgo(f, g, features.shape[1])
-    #     self.save(optimizedW.tolist())
+    
 
     def predict(self, features):
         self.loadPara()

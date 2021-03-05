@@ -3,7 +3,7 @@ import csv
 import importlib
 import numpy as np
 from sklearn.model_selection import  train_test_split
-from utilities import loadConfigWithName,perceptronLabelTransform
+from utilities import loadConfigWithName,loadMultipleConfigWithName
 trainFeature=None
 trainLabel=None
 testFeature=None
@@ -25,15 +25,17 @@ def loadData(modelName:str,mode:str):
 
     module=importlib.import_module("utilities.transform")
     #transform
-    labelTransform=loadConfigWithName(modelName+"Config","labelTransform")
+    labelTransform=loadMultipleConfigWithName(modelName+"Config","labelTransform")
     if labelTransform!=None:
-        labelTransformMethod=getattr(module,labelTransform)
-        labels=labelTransformMethod(labels)
+        for oneLabelTransform in labelTransform:
+            labelTransformMethod=getattr(module,oneLabelTransform)
+            labels=labelTransformMethod(labels)
 
-    featureTransform=loadConfigWithName(modelName+"Config","featureTransform")
+    featureTransform=loadMultipleConfigWithName(modelName+"Config","featureTransform")
     if featureTransform!=None:
-        featureTransformMethod = getattr(module, featureTransform)
-        features = featureTransformMethod(features)
+        for oneFeatureTransform in featureTransform:
+            featureTransformMethod = getattr(module, oneFeatureTransform)
+            features = featureTransformMethod(features)
 
 
     train_features, test_features, train_labels, test_labels = train_test_split(features, labels, test_size=0.33)

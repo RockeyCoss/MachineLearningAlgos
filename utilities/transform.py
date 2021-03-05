@@ -21,9 +21,16 @@ def binaryFeature(data):
     data[np.where(data>127.5)]=1
     return data
 
+def normalizeFeature(data):
+    data=data/255
+    return data
 
 #label transforms
-def perceptronLabelTransform(labels):
+def minusOneAndOneLabelTransform(labels):
     labels[np.where(labels != 1)] = -1
+    return labels
+
+def zeroOneLabelTransform(labels):
+    labels[np.where(labels!=1)]=0
     return labels
 

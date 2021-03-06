@@ -1,7 +1,8 @@
 import json
 import os
+import numpy as np
 class ModelBaseClass:
-    def train(self, features, labels, *args, **dicts):
+    def train(self, features:np.array, labels:np.array, *args, **dicts):
         """
         train the model
         :param features:features of the training set
@@ -12,7 +13,7 @@ class ModelBaseClass:
         """
         pass
 
-    def predict(self, features):
+    def predict(self, features:np.array):
         """
         predict the label of the test set with the trained model
         :param features:features of the test set

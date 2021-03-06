@@ -4,6 +4,8 @@ from utilities import BFGSAlgo,loadConfigWithName
 
 
 # Remember that for logistic model, the label yi is either 0 or 1, not -1 or 1!
+#本来打算拟牛顿的,但是一直有点数值问题，最后采用了SGD的优化方案
+#SGD的参数没有细调，学习率也应该是用line search而不是固定的，但是懒得写了呜呜呜，留以后吧
 class Logistic(ModelBaseClass):
     def __init__(self):
         self.w = None
@@ -38,7 +40,6 @@ class Logistic(ModelBaseClass):
 
         w=np.random.rand(features.shape[1])
         while True:
-            print(np.linalg.norm(self.g(w,features,labels)))
             if np.linalg.norm(self.g(w,features,labels))<threshhold:
                 self.save(w.tolist())
                 return
@@ -51,7 +52,6 @@ class Logistic(ModelBaseClass):
 
                 w=w-learningRate*grad
 
-    
 
     def predict(self, features):
         self.loadPara()

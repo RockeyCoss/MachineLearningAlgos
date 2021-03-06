@@ -1,5 +1,9 @@
 <?xml version="1.0"?>
 <logistic>
-    <featureTransform>normalizeFeature</featureTransform>
+    <featureTransform>hogFeature</featureTransform>
+    <featureTransform>addOneColumn</featureTransform>
     <labelTransform>zeroOneLabelTransform</labelTransform>
+    <learningRate>4.5</learningRate>
+    <batchSize>10</batchSize>
+    <threshold>1e-5</threshold>
 </logistic>

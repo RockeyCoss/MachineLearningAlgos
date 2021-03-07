@@ -24,19 +24,33 @@ class MaximumEntropy(ModelBaseClass):
             self.fFuncThreshold = threshold
         if self.fFuncThreshold <= 0.5:
             raise Exception("threshold too low")
+        self.featureFunc=None
+        self.labelNum=None
+        self.subFeatureNum=None
+    
+    def Pwyx(self,w,xiValue,y,column):
+        numerator=np.exp(w[self.getWeightIndex(y,column)]) if self.featureFunc[y,column]==xiValue else 1
+        denominator=0
+        for eachY in range(self.labelNum):
+            denominator+=np.exp(w[self.getWeightIndex(eachY,column)]) if self.featureFunc[eachY,column]==xiValue else 1
+        return numerator/denominator
+
+    def getWeightIndex(self,label, column):
+        return label * self.subFeatureNum + column
 
     def train(self, features: np.array, labels: np.array, *args, **dicts):
-        labelNum=np.unique(labels).shape[0]
+        self.labelNum=np.unique(labels).shape[0]
+        self.subFeatureNum=features.shape[1]
         featureFunc = -1 * np.ones((len(np.unique(labels)), features.shape[1]))
         # ffCount = len(featureFunc) - 1
 
         # P(xi, y) laebl,xi.
         # To save memory, only the possibilities of those (xi,y) who correspond
         # to at least one feature function are computed.
-        pxiY = np.zeros((labelNum,features.shape[1],2))
+        pxiY = np.zeros((self.labelNum,features.shape[1],2))
         # construct feature functions
         for aLabel in np.unique(labels):
-            labelFilteredFeature = features[np.where(labels == aLabel), :]
+            labelFilteredFeature = np.squeeze(features[np.where(labels == aLabel), :])
             for column in range(labelFilteredFeature.shape[1]):
                 oneNum = np.sum(labelFilteredFeature[:, column])
                 onePercent = oneNum / labelFilteredFeature.shape[0]
@@ -47,43 +61,72 @@ class MaximumEntropy(ModelBaseClass):
                 elif zeroPercent >= self.fFuncThreshold:
                     featureFunc[aLabel, column] = 0
         pxiY[:, :, 0] = 1 - pxiY[:,:,1]
-
+        self.featureFunc=featureFunc
 
         pxiY = np.array(pxiY)
 
         # compute P(xi)
         # value, xi
-        onePosibility = np.sum(features, axis=1) / features.shape[0]
+        onePosibility = np.sum(features, axis=0) / features.shape[0]
         zeroPosibility = 1 - onePosibility
-        pxi = np.concatenate(zeroPosibility, onePosibility, axis=0)
-
-        def f(w):
-            w=w.reshape(labelNum,-1)
-            fw=0
-            for aFeature in features:
-                #left part
-                SigmaexpWiFi = np.sum(np.exp(np.sum(w * (aFeature == featureFunc), axis=1)), axis=0)
-                logSigma = np.log(SigmaexpWiFi)
-                PxlogSigma = np.prod(pxi[aFeature, np.arange(pxi.shape[1])])*logSigma
-
-                #right part
-                wifi=np.sum(w * (aFeature == featureFunc), axis=1)
-                Pxy=np.prod(pxiY[:,np.arange(aFeature.shape[0]),aFeature],axis=1)
-                pxyWiFi=np.sum(Pxy*wifi,axis=0)
-                fw+=PxlogSigma-pxyWiFi
-            return fw
-
+        pxi = np.concatenate((zeroPosibility.reshape((1,-1)), onePosibility.reshape((1,-1))), axis=0)
         
 
+        def f(w):
+            fw=0
+            for xiValue in range(2):
+                for column in range(features.shape[1]):
+                    sigmaExp=0
+                    rightPart = 0
+                    for y in range(self.labelNum):
+                        if featureFunc[y,column]==xiValue:
+                            sigmaExp+=np.exp(w[self.getWeightIndex(y,column)])
+                            rightPart+=pxiY[y,column,xiValue]*w[self.getWeightIndex(y,column)]
+                        else:
+                            sigmaExp+=1
+                    PxiLogSigma=pxi[xiValue,column]*np.log(sigmaExp)
+                    fw+=PxiLogSigma-rightPart
+            print(fw)
+            return fw
 
 
+        def g(w):
+            featureFuctLine=self.featureFunc.reshape((-1,))
+            result=np.zeros(w.shape)
+            for i in range(pxiY.shape[0]):
+                for j in range(pxiY.shape[1]):
+                    if featureFunc[i,j]!=-1:
+                        result[self.getWeightIndex(i,j)]=pxiY[i,j,int(featureFunc[i,j])]
 
+            leftPart=0
+            for xiValue in range(2):
+                for column in range(features.shape[1]):
+                    for y in range(self.labelNum):
+                        if featureFunc[y,column]==xiValue:
+                            leftPart+=pxi[xiValue,column]*self.Pwyx(w,xiValue,y,column)
+            result[np.where(featureFuctLine!=-1)]+=leftPart
+            return result
+
+        optimizeW=BFGSAlgo(f,g,self.labelNum*self.subFeatureNum)
+        para={}
+        para["w"]=optimizeW.tolist()
+        para["featureFunc"]=featureFunc.tolist()
+        self.save(para)
 
     def save(self, para):
         super().save(para)
 
     def predict(self, features):
-        pass
+        self.loadPara()
+        result=[]
+        for aFeature in features:
+            for y in range(self.featureFunc.shape[0]):
+                pass
+
 
     def loadPara(self):
-        pass
+        para=self.loadJson()
+        self.w=para["w"]
+        self.featureFunc=para["featureFunc"]
+
+

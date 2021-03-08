@@ -24,109 +24,106 @@ class MaximumEntropy(ModelBaseClass):
             self.fFuncThreshold = threshold
         if self.fFuncThreshold <= 0.5:
             raise Exception("threshold too low")
-        self.featureFunc=None
-        self.labelNum=None
-        self.subFeatureNum=None
-    
-    def Pwyx(self,w,xiValue,y,column):
-        numerator=np.exp(w[self.getWeightIndex(y,column)]) if self.featureFunc[y,column]==xiValue else 1
-        denominator=0
-        for eachY in range(self.labelNum):
-            denominator+=np.exp(w[self.getWeightIndex(eachY,column)]) if self.featureFunc[eachY,column]==xiValue else 1
-        return numerator/denominator
+        # feature function 个数，也是w的维度数
+        self.wDimension = 0
+        self.w = None
+        self.featureFunc = None
+        self.labelNum = 0
+        self.subFeatureNum = 0
+        # self.wToffList[i]=The location of the feature function that corresponds to weight wi in featureFunc
+        self.wToffHash = None
+        self.ffTowHash = None
+        self.Px = None
+        self.Pxy = None
 
-    def getWeightIndex(self,label, column):
-        return label * self.subFeatureNum + column
+    def Pwyx(self, X, y):
+        numerator = 0
+        denominator = 0
+        match = self.featureFunc == X
+        for labelIndex in range(match.shape[0]):
+            sigma = 0
+            for index2 in np.argwhere(match[labelIndex] == 1):
+                sigma += self.w[self.ffTowHash[self.ffHash((labelIndex, index2))]]
+            expSigma = np.exp(sigma)
+            if labelIndex == y:
+                numerator += expSigma
+            denominator += expSigma
+        return numerator / denominator
+
+    def ffHash(self, coordinate):
+        return (self.subFeatureNum) * coordinate[0] + coordinate[1]
+
+    def f(self, w):
+        left = 0
+        right = 0
+        for column in range(self.subFeatureNum):
+            for xiValue in range(2):
+                sigmaY = 0
+                for y in range(self.labelNum):
+                    sigma = 0
+                    if self.featureFunc[y, column] == xiValue:
+                        sigma += w[self.ffTowHash[self.ffHash((y, column))]]
+                        right += w[self.ffTowHash[self.ffHash((y, column))]] * self.Pxy[y, column, xiValue]
+                    sigmaY += np.exp(sigma)
+                left += self.Px[xiValue, column] * np.log(sigmaY)
+        return left - right
+
+    def g(self, w):
+        result = np.zeros(w.shape)
+        for index in range(w.shape[0]):
+            label, column = self.wToffHash[index]
+            xiValue = self.featureFunc[label, column]
+            denominator = 0
+            for otherLabel in range(self.labelNum):
+                if self.featureFunc[otherLabel, column] == xiValue:
+                    denominator += np.exp(w[self.ffTowHash[self.ffHash((otherLabel, column))]])
+                else:
+                    denominator += 1
+            result[index] = self.Px[xiValue, column] * (np.exp(w[index]) / denominator) - self.Pxy[
+                label, column, xiValue]
+        return result
 
     def train(self, features: np.array, labels: np.array, *args, **dicts):
-        self.labelNum=np.unique(labels).shape[0]
-        self.subFeatureNum=features.shape[1]
-        featureFunc = -1 * np.ones((len(np.unique(labels)), features.shape[1]))
-        # ffCount = len(featureFunc) - 1
-
-        # P(xi, y) laebl,xi.
-        # To save memory, only the possibilities of those (xi,y) who correspond
-        # to at least one feature function are computed.
-        pxiY = np.zeros((self.labelNum,features.shape[1],2))
-        # construct feature functions
-        for aLabel in np.unique(labels):
+        self.labelNum = np.unique(labels).shape[0]
+        self.subFeatureNum = features.shape[1]
+        featureFunc = -1 * np.ones((self.labelNum, self.subFeatureNum), dtype=int)
+        Pxy = np.zeros((self.labelNum, self.subFeatureNum, 2))
+        for aLabel in range(self.labelNum):
             labelFilteredFeature = np.squeeze(features[np.where(labels == aLabel), :])
-            for column in range(labelFilteredFeature.shape[1]):
-                oneNum = np.sum(labelFilteredFeature[:, column])
-                onePercent = oneNum / labelFilteredFeature.shape[0]
-                zeroPercent = 1 - onePercent
-                pxiY[aLabel,column,1] = onePercent
-                if onePercent >= self.fFuncThreshold:
-                    featureFunc[aLabel, column] = 1
-                elif zeroPercent >= self.fFuncThreshold:
-                    featureFunc[aLabel, column] = 0
-        pxiY[:, :, 0] = 1 - pxiY[:,:,1]
-        self.featureFunc=featureFunc
+            oneProbability = np.sum(labelFilteredFeature, axis=0) / labelFilteredFeature.shape[0]
+            zeroProbability = 1 - oneProbability
+            featureFunc[aLabel, np.where(oneProbability >= self.fFuncThreshold)] = 1
+            featureFunc[aLabel, np.where(zeroProbability >= self.fFuncThreshold)] = 0
+            Pxy[aLabel, :, 1] = oneProbability
+            Pxy[aLabel, :, 0] = zeroProbability
+        validPosition = np.argwhere(featureFunc != -1)
+        self.featureFunc = featureFunc
+        self.wDimension = validPosition.shape[0]
+        self.wToffHash = validPosition
 
-        pxiY = np.array(pxiY)
+        # w与featureFunc坐标用哈希表映射
+        self.ffTowHash = np.array([-1 for dummy in range(self.labelNum * self.subFeatureNum)])
+        for coordinateIndex in range(self.wToffHash.shape[0]):
+            self.ffTowHash[self.ffHash(self.wToffHash[coordinateIndex])] = coordinateIndex
 
-        # compute P(xi)
-        # value, xi
-        onePosibility = np.sum(features, axis=0) / features.shape[0]
-        zeroPosibility = 1 - onePosibility
-        pxi = np.concatenate((zeroPosibility.reshape((1,-1)), onePosibility.reshape((1,-1))), axis=0)
-        
+        oneP = np.sum(features, axis=0) / features.shape[0]
+        zeroP = 1 - oneP
+        self.Px = np.concatenate((zeroP.reshape((1, -1)), oneP.reshape((1, -1))), axis=0)
+        self.Pxy = Pxy
 
-        def f(w):
-            fw=0
-            for xiValue in range(2):
-                for column in range(features.shape[1]):
-                    sigmaExp=0
-                    rightPart = 0
-                    for y in range(self.labelNum):
-                        if featureFunc[y,column]==xiValue:
-                            sigmaExp+=np.exp(w[self.getWeightIndex(y,column)])
-                            rightPart+=pxiY[y,column,xiValue]*w[self.getWeightIndex(y,column)]
-                        else:
-                            sigmaExp+=1
-                    PxiLogSigma=pxi[xiValue,column]*np.log(sigmaExp)
-                    fw+=PxiLogSigma-rightPart
-            print(fw)
-            return fw
-
-
-        def g(w):
-            featureFuctLine=self.featureFunc.reshape((-1,))
-            result=np.zeros(w.shape)
-            for i in range(pxiY.shape[0]):
-                for j in range(pxiY.shape[1]):
-                    if featureFunc[i,j]!=-1:
-                        result[self.getWeightIndex(i,j)]=pxiY[i,j,int(featureFunc[i,j])]
-
-            leftPart=0
-            for xiValue in range(2):
-                for column in range(features.shape[1]):
-                    for y in range(self.labelNum):
-                        if featureFunc[y,column]==xiValue:
-                            leftPart+=pxi[xiValue,column]*self.Pwyx(w,xiValue,y,column)
-            result[np.where(featureFuctLine!=-1)]+=leftPart
-            return result
-
-        optimizeW=BFGSAlgo(f,g,self.labelNum*self.subFeatureNum)
-        para={}
-        para["w"]=optimizeW.tolist()
-        para["featureFunc"]=featureFunc.tolist()
+        optimizeW = BFGSAlgo(self.f, self.g, self.wDimension)
+        para = {}
+        para["w"] = optimizeW.tolist()
+        para["featureFunc"] = self.featureFunc.tolist()
+        para["subFeatureNum"] = self.subFeatureNum
+        para["ffTowHash"] = self.ffTowHash.tolist()
         self.save(para)
 
     def save(self, para):
         super().save(para)
 
     def predict(self, features):
-        self.loadPara()
-        result=[]
-        for aFeature in features:
-            for y in range(self.featureFunc.shape[0]):
-                pass
-
+        pass
 
     def loadPara(self):
-        para=self.loadJson()
-        self.w=para["w"]
-        self.featureFunc=para["featureFunc"]
-
-
+        pass

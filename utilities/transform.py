@@ -19,10 +19,14 @@ def hogFeature(data):
 def binaryFeature(data):
     data[np.where(data<=127.5)]=0
     data[np.where(data>127.5)]=1
-    return data
+    return data.astype(int)
 
 def normalizeFeature(data):
     data=data/255
+    return data
+
+def addOneColumn(data):
+    data=np.insert(data,data.shape[1],1,axis=1)
     return data
 
 #label transforms

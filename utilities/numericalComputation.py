@@ -18,9 +18,10 @@ def BFGSAlgo(f,g,xd,epsilon=1.e-6):
         pk = np.linalg.solve(B, -1 * gk)
         #pk=solveEquation(B,-1*gk)
 
-        #print(np.linalg.norm(pk-pk2))
+        print(np.linalg.norm(gk))
 
-        stepLength=calLambdaByArmijoRule(x.reshape(-1,1),f(x),gk.reshape(-1,1),pk.reshape(-1,1),f)
+        #stepLength=calLambdaByArmijoRule(x.reshape(-1,1),f(x),gk.reshape(-1,1),pk.reshape(-1,1),f)
+        stepLength=0.01
         xPre=x
         gkPre=gk
 
@@ -33,7 +34,6 @@ def BFGSAlgo(f,g,xd,epsilon=1.e-6):
         yk=gk-gkPre
         deltaK=x-xPre
         deltaMatrix=np.matmul(deltaK.reshape(-1,1),deltaK.reshape(1,-1))
-
         B=B+(np.matmul(yk.reshape(-1,1),yk.reshape(1,-1))/np.sum(yk*deltaK))- \
           (np.matmul(np.matmul(B,deltaMatrix),B)/np.matmul(np.matmul(deltaK.reshape(1,-1),B),deltaK.reshape(-1,1)))
 
@@ -66,6 +66,7 @@ def PALU_Factorization(A: np.array):
     for index in range(U.shape[1]):
         maxIndex = index + np.argmax(U[index:, index])
         # exchange 2 rows
+        #print(U[[index, maxIndex], :])
         P[[index, maxIndex], :] = P[[maxIndex, index], :]
         U[[index, maxIndex], :] = U[[maxIndex, index], :]
         L[[index, maxIndex], :] = L[[maxIndex, index], :]
@@ -112,3 +113,4 @@ if __name__ == '__main__':
     f=lambda x:5*x[0]*x[0]+2*x[1]*x[1]+3*x[0]-10*x[1]+4
     g=lambda x:np.array([10*x[0]+3,4*x[1]-10])
     print(BFGSAlgo(f,g,2))
+    #print(solveEquation(np.eye(50),np.array([i for i in range(50)])))

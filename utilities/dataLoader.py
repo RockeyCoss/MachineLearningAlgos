@@ -4,13 +4,13 @@ import importlib
 import numpy as np
 from sklearn.model_selection import  train_test_split
 from utilities import loadConfigWithName,loadMultipleConfigWithName
-trainFeature=None
-trainLabel=None
-testFeature=None
-testLabel=None
+trainFeature=np.array([])
+trainLabel=np.array([])
+testFeature=np.array([])
+testLabel=np.array([])
 def loadData(modelName:str,mode:str):
     global trainLabel,trainFeature,testLabel,testFeature
-    if mode=="test" and (testFeature!=None).any() and (testLabel!=None).any():
+    if mode=="test" and testFeature!=np.array([]) and testLabel!=np.array([]):
         return testFeature,testLabel
     features=None
     with open('../data/train.csv','r') as f:

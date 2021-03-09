@@ -1,6 +1,6 @@
 import numpy as np
 
-def BFGSAlgo(f,g,xd,epsilon=1.e-6):
+def BFGSAlgo(f,g,xd,epsilon=1e-6):
     """
        quasi-Newton method, use BFGS algorithm
        :param f:target function, it's a method having a float parameter.
@@ -9,7 +9,8 @@ def BFGSAlgo(f,g,xd,epsilon=1.e-6):
        :param epsilon: precision
        :return: the optimization point
     """
-    x=np.random.rand(xd)
+    #x=np.random.rand(xd)
+    x=np.zeros(xd)
     B=np.eye(xd)
     gk=g(x)
     if np.linalg.norm(gk)<epsilon:
@@ -18,10 +19,10 @@ def BFGSAlgo(f,g,xd,epsilon=1.e-6):
         pk = np.linalg.solve(B, -1 * gk)
         #pk=solveEquation(B,-1*gk)
 
-        print(np.linalg.norm(gk))
-
-        #stepLength=calLambdaByArmijoRule(x.reshape(-1,1),f(x),gk.reshape(-1,1),pk.reshape(-1,1),f)
-        stepLength=0.01
+        # print("grad",np.linalg.norm(gk))
+        # print("function",f(x))
+        stepLength=calLambdaByArmijoRule(x.reshape(-1,1),f(x),gk.reshape(-1,1),pk.reshape(-1,1),f)
+        #stepLength=0.01
         xPre=x
         gkPre=gk
 

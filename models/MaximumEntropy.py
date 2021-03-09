@@ -16,11 +16,9 @@ from utilities import BFGSAlgo, loadConfigWithName
 # feature:每一个像素中存储的是0或1
 # threshold>0.5
 # 训练集中应保证所有label至少出现过一次
+# 使用拟牛顿法求解
+# 求导式和书本不同，根据MNIST数据集重新求导(即把x改为xi再求导）
 
-# 牛顿法重新调整求导式子后仍然不能得到正确结果，基本宣告放弃
-# 参考网上思路并改用IIS。
-# 妥协点：1. 其实并不满足#f(x,y)为常数但当成常数使用
-#       2. P(X|Y)等概率计算在采取整个特征向量还是特征向量的分量上比较混乱，但书本上描述细节太少只能这样妥协了
 class MaximumEntropy(ModelBaseClass):
     def __init__(self, threshold=None):
         if threshold == None:
@@ -93,20 +91,21 @@ class MaximumEntropy(ModelBaseClass):
         self.labelNum = np.unique(labels).shape[0]
         self.subFeatureNum = features.shape[1]
         featureFunc = -1 * np.ones((self.labelNum, self.subFeatureNum), dtype=int)
-        Pxy = np.zeros((self.labelNum, self.subFeatureNum, 2))
+        self.Pxy = np.zeros((self.labelNum, self.subFeatureNum, 2))
         for aLabel in range(self.labelNum):
             labelFilteredFeature = np.squeeze(features[np.where(labels == aLabel), :])
-            oneProbability = np.sum(labelFilteredFeature, axis=0) / labelFilteredFeature.shape[0]
+            oneSum=np.sum(labelFilteredFeature, axis=0)
+            oneProbability = oneSum / labelFilteredFeature.shape[0]
             zeroProbability = 1 - oneProbability
             featureFunc[aLabel, np.where(oneProbability >= self.fFuncThreshold)] = 1
             featureFunc[aLabel, np.where(zeroProbability >= self.fFuncThreshold)] = 0
-            Pxy[aLabel, :, 1] = np.sum(labelFilteredFeature, axis=0)
-            Pxy[aLabel, :, 0] = labelFilteredFeature.shape[0]-Pxy[aLabel,:,1]
+            self.Pxy[aLabel, :, 1] = oneSum
+            self.Pxy[aLabel, :, 0] = labelFilteredFeature.shape[0]-self.Pxy[aLabel,:,1]
         validPosition = np.argwhere(featureFunc != -1)
         self.featureFunc = featureFunc
         self.wDimension = validPosition.shape[0]
         self.wToffHashTable = validPosition
-
+        self.Pxy = self.Pxy / features.shape[0]
         # w与featureFunc坐标用哈希表映射
         self.ffTowHashTable = np.array([-1 for dummy in range(self.labelNum * self.subFeatureNum)])
         for coordinateIndex in range(self.wToffHashTable.shape[0]):
@@ -115,28 +114,12 @@ class MaximumEntropy(ModelBaseClass):
         oneP = np.sum(features, axis=0) / features.shape[0]
         zeroP = 1 - oneP
         self.Px = np.concatenate((zeroP.reshape((1, -1)), oneP.reshape((1, -1))), axis=0)
-        Pxy = Pxy/features.shape[0]
-        self.Pxy=Pxy
-        #optimizeW = BFGSAlgo(self.f, self.g, self.wDimension)
-        self.w=np.zeros(self.wDimension)
-        Ep_f=np.zeros(self.wDimension)
-        for index in range(self.wDimension):
-            label,column=self.wToffHashTable[index]
-            xiValue=self.featureFunc[label,column]
-            Ep_f[index]=Pxy[label,column,xiValue]
 
-        while True:
-            Epf=self.getEpf(features)
-            sigma=(1/self.wDimension)*np.log(Ep_f/Epf)
-            #sigma = (1/10000 ) * np.log(Ep_f / Epf)
-            self.w+=sigma
-            judge=np.linalg.norm(np.array(sigma))
-            print(judge)
-            if judge<self.stopThreshold:
-                break
+        optimizeW = BFGSAlgo(self.f, self.g, self.wDimension,self.stopThreshold)
+
 
         para = {}
-        para["w"] = self.w.tolist()
+        para["w"] = optimizeW.tolist()
         para["featureFunc"] = self.featureFunc.tolist()
         para["subFeatureNum"] = self.subFeatureNum
         para["ffTowHash"] = self.ffTowHashTable.tolist()
@@ -145,18 +128,6 @@ class MaximumEntropy(ModelBaseClass):
 
     def ffHashLargeSize(self, coordinate):
         return (self.subFeatureNum) * coordinate[:,0] + coordinate[:,1]
-
-    def getEpf(self,features):
-        Epf=np.zeros(self.wDimension)
-        #Epf2=np.zeros(self.wDimension)
-        for aFeature in features:
-            pwyxList=np.squeeze(np.array([self.Pwyx(aFeature,y) for y in range(self.labelNum)]))
-            match=self.featureFunc==aFeature
-            matchCoordinate=np.argwhere(match==1)
-            Epf[self.ffTowHashTable[self.ffHashLargeSize(matchCoordinate)]]+=(1/features.shape[0])*pwyxList[matchCoordinate[:,0]]
-            # for coordinate in matchCoordinate:
-            #     Epf[self.ffTowHashTable[self.ffHash(coordinate)]] += (1 / features.shape[0]) * pwyxList[coordinate[0]]
-        return Epf
 
     def save(self, para):
         super().save(para)

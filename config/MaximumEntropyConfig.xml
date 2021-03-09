@@ -2,6 +2,6 @@
 <maximumEntropy>
     <featureTransform>binaryFeature</featureTransform>
     <labelTransform>zeroOneLabelTransform</labelTransform>
-    <featureFunctionThreshold>0.7</featureFunctionThreshold>
-    <stopThreshold>0.0002</stopThreshold>
+    <featureFunctionThreshold>0.73</featureFunctionThreshold>
+    <stopThreshold>1e-6</stopThreshold>
 </maximumEntropy>

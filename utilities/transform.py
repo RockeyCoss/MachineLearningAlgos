@@ -26,7 +26,7 @@ def normalizeFeature(data):
     return data
 
 def addOneColumn(data):
-    data=np.insert(data,data.shape[1],1,axis=1)
+    data=np.insert(data,data.shape[1],0.5,axis=1)
     return data
 
 #label transforms

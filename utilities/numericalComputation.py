@@ -19,9 +19,12 @@ def BFGSAlgo(f,g,xd,epsilon=1e-6):
         pk = np.linalg.solve(B, -1 * gk)
         #pk=solveEquation(B,-1*gk)
 
-        # print("grad",np.linalg.norm(gk))
+        abs=np.abs(gk)
+        # print("grad",np.max(abs),np.argmax(abs))
         # print("function",f(x))
-        stepLength=calLambdaByArmijoRule(x.reshape(-1,1),f(x),gk.reshape(-1,1),pk.reshape(-1,1),f)
+        # print("w",np.max(x),np.argmax(x),np.median(x),np.mean(x))
+        # print()
+        stepLength=calLambdaByArmijoRule(x,f(x),gk,pk,f)
         #stepLength=0.01
         xPre=x
         gkPre=gk
@@ -50,7 +53,8 @@ def calLambdaByArmijoRule(xCurr, fCurr, gCurr, pkCurr,f, c=1.e-4, v=0.5):
     fNext = f(xNext)
 
     while True:
-        if fNext <= fCurr + c * alpha * np.matmul(pkCurr.T, gCurr)[0, 0]: break
+        if fNext <= fCurr + c * alpha * np.sum(pkCurr*gCurr):
+            break
         i += 1
         alpha = v ** i
         xNext = xCurr + alpha * pkCurr

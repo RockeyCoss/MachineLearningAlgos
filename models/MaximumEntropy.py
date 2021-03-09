@@ -29,6 +29,7 @@ class MaximumEntropy(ModelBaseClass):
             self.fFuncThreshold = threshold
         if self.fFuncThreshold <= 0.5:
             raise Exception("threshold too low")
+        self.stopThreshold=float(loadConfigWithName("MaximumEntropyConfig", "stopThreshold"))
         # feature function 个数，也是w的维度数
         self.wDimension = 0
         self.w = None
@@ -47,7 +48,7 @@ class MaximumEntropy(ModelBaseClass):
         match = self.featureFunc == X
         for labelIndex in range(match.shape[0]):
             sigma = 0
-            for index2 in np.argwhere(match[labelIndex] == 1):
+            for index2 in np.squeeze(np.argwhere(match[labelIndex] == 1)):
                 sigma += self.w[self.ffTowHashTable[self.ffHash((labelIndex, index2))]]
             expSigma = np.exp(sigma)
             if labelIndex == y:
@@ -99,8 +100,8 @@ class MaximumEntropy(ModelBaseClass):
             zeroProbability = 1 - oneProbability
             featureFunc[aLabel, np.where(oneProbability >= self.fFuncThreshold)] = 1
             featureFunc[aLabel, np.where(zeroProbability >= self.fFuncThreshold)] = 0
-            Pxy[aLabel, :, 1] = oneProbability
-            Pxy[aLabel, :, 0] = zeroProbability
+            Pxy[aLabel, :, 1] = np.sum(labelFilteredFeature, axis=0)
+            Pxy[aLabel, :, 0] = labelFilteredFeature.shape[0]-Pxy[aLabel,:,1]
         validPosition = np.argwhere(featureFunc != -1)
         self.featureFunc = featureFunc
         self.wDimension = validPosition.shape[0]
@@ -114,10 +115,10 @@ class MaximumEntropy(ModelBaseClass):
         oneP = np.sum(features, axis=0) / features.shape[0]
         zeroP = 1 - oneP
         self.Px = np.concatenate((zeroP.reshape((1, -1)), oneP.reshape((1, -1))), axis=0)
-        self.Pxy = Pxy
-
+        Pxy = Pxy/features.shape[0]
+        self.Pxy=Pxy
         #optimizeW = BFGSAlgo(self.f, self.g, self.wDimension)
-        self.w=np.random.rand(self.wDimension)
+        self.w=np.zeros(self.wDimension)
         Ep_f=np.zeros(self.wDimension)
         for index in range(self.wDimension):
             label,column=self.wToffHashTable[index]
@@ -131,7 +132,7 @@ class MaximumEntropy(ModelBaseClass):
             self.w+=sigma
             judge=np.linalg.norm(np.array(sigma))
             print(judge)
-            if judge<1e-5:
+            if judge<self.stopThreshold:
                 break
 
         para = {}
@@ -152,12 +153,9 @@ class MaximumEntropy(ModelBaseClass):
             pwyxList=np.squeeze(np.array([self.Pwyx(aFeature,y) for y in range(self.labelNum)]))
             match=self.featureFunc==aFeature
             matchCoordinate=np.argwhere(match==1)
-            temp1=self.ffHashLargeSize(matchCoordinate)
-            temp2=self.ffTowHashTable[temp1]
-            Epf[temp2]+=(1/features.shape[0])*pwyxList[matchCoordinate[:,0]]
+            Epf[self.ffTowHashTable[self.ffHashLargeSize(matchCoordinate)]]+=(1/features.shape[0])*pwyxList[matchCoordinate[:,0]]
             # for coordinate in matchCoordinate:
-            #     Epf2[self.ffTowHashTable[self.ffHash(coordinate)]] += (1 / features.shape[0]) * pwyxList[coordinate[0]]
-            # a=sum(Epf-Epf2)
+            #     Epf[self.ffTowHashTable[self.ffHash(coordinate)]] += (1 / features.shape[0]) * pwyxList[coordinate[0]]
         return Epf
 
     def save(self, para):

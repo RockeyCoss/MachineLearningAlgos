@@ -3,4 +3,5 @@
     <featureTransform>binaryFeature</featureTransform>
     <labelTransform>zeroOneLabelTransform</labelTransform>
     <featureFunctionThreshold>0.7</featureFunctionThreshold>
+    <stopThreshold>0.0002</stopThreshold>
 </maximumEntropy>

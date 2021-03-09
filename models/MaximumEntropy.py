@@ -16,6 +16,11 @@ from utilities import BFGSAlgo, loadConfigWithName
 # feature:每一个像素中存储的是0或1
 # threshold>0.5
 # 训练集中应保证所有label至少出现过一次
+
+# 牛顿法重新调整求导式子后仍然不能得到正确结果，基本宣告放弃
+# 参考网上思路并改用IIS。
+# 妥协点：1. 其实并不满足#f(x,y)为常数但当成常数使用
+#       2. P(X|Y)等概率计算在采取整个特征向量还是特征向量的分量上比较混乱，但书本上描述细节太少只能这样妥协了
 class MaximumEntropy(ModelBaseClass):
     def __init__(self, threshold=None):
         if threshold == None:
@@ -31,8 +36,8 @@ class MaximumEntropy(ModelBaseClass):
         self.labelNum = 0
         self.subFeatureNum = 0
         # self.wToffList[i]=The location of the feature function that corresponds to weight wi in featureFunc
-        self.wToffHash = None
-        self.ffTowHash = None
+        self.wToffHashTable = None
+        self.ffTowHashTable = None
         self.Px = None
         self.Pxy = None
 
@@ -43,7 +48,7 @@ class MaximumEntropy(ModelBaseClass):
         for labelIndex in range(match.shape[0]):
             sigma = 0
             for index2 in np.argwhere(match[labelIndex] == 1):
-                sigma += self.w[self.ffTowHash[self.ffHash((labelIndex, index2))]]
+                sigma += self.w[self.ffTowHashTable[self.ffHash((labelIndex, index2))]]
             expSigma = np.exp(sigma)
             if labelIndex == y:
                 numerator += expSigma
@@ -62,8 +67,8 @@ class MaximumEntropy(ModelBaseClass):
                 for y in range(self.labelNum):
                     sigma = 0
                     if self.featureFunc[y, column] == xiValue:
-                        sigma += w[self.ffTowHash[self.ffHash((y, column))]]
-                        right += w[self.ffTowHash[self.ffHash((y, column))]] * self.Pxy[y, column, xiValue]
+                        sigma += w[self.ffTowHashTable[self.ffHash((y, column))]]
+                        right += w[self.ffTowHashTable[self.ffHash((y, column))]] * self.Pxy[y, column, xiValue]
                     sigmaY += np.exp(sigma)
                 left += self.Px[xiValue, column] * np.log(sigmaY)
         return left - right
@@ -71,12 +76,12 @@ class MaximumEntropy(ModelBaseClass):
     def g(self, w):
         result = np.zeros(w.shape)
         for index in range(w.shape[0]):
-            label, column = self.wToffHash[index]
+            label, column = self.wToffHashTable[index]
             xiValue = self.featureFunc[label, column]
             denominator = 0
             for otherLabel in range(self.labelNum):
                 if self.featureFunc[otherLabel, column] == xiValue:
-                    denominator += np.exp(w[self.ffTowHash[self.ffHash((otherLabel, column))]])
+                    denominator += np.exp(w[self.ffTowHashTable[self.ffHash((otherLabel, column))]])
                 else:
                     denominator += 1
             result[index] = self.Px[xiValue, column] * (np.exp(w[index]) / denominator) - self.Pxy[
@@ -99,31 +104,80 @@ class MaximumEntropy(ModelBaseClass):
         validPosition = np.argwhere(featureFunc != -1)
         self.featureFunc = featureFunc
         self.wDimension = validPosition.shape[0]
-        self.wToffHash = validPosition
+        self.wToffHashTable = validPosition
 
         # w与featureFunc坐标用哈希表映射
-        self.ffTowHash = np.array([-1 for dummy in range(self.labelNum * self.subFeatureNum)])
-        for coordinateIndex in range(self.wToffHash.shape[0]):
-            self.ffTowHash[self.ffHash(self.wToffHash[coordinateIndex])] = coordinateIndex
+        self.ffTowHashTable = np.array([-1 for dummy in range(self.labelNum * self.subFeatureNum)])
+        for coordinateIndex in range(self.wToffHashTable.shape[0]):
+            self.ffTowHashTable[self.ffHash(self.wToffHashTable[coordinateIndex])] = coordinateIndex
 
         oneP = np.sum(features, axis=0) / features.shape[0]
         zeroP = 1 - oneP
         self.Px = np.concatenate((zeroP.reshape((1, -1)), oneP.reshape((1, -1))), axis=0)
         self.Pxy = Pxy
 
-        optimizeW = BFGSAlgo(self.f, self.g, self.wDimension)
+        #optimizeW = BFGSAlgo(self.f, self.g, self.wDimension)
+        self.w=np.random.rand(self.wDimension)
+        Ep_f=np.zeros(self.wDimension)
+        for index in range(self.wDimension):
+            label,column=self.wToffHashTable[index]
+            xiValue=self.featureFunc[label,column]
+            Ep_f[index]=Pxy[label,column,xiValue]
+
+        while True:
+            Epf=self.getEpf(features)
+            sigma=(1/self.wDimension)*np.log(Ep_f/Epf)
+            #sigma = (1/10000 ) * np.log(Ep_f / Epf)
+            self.w+=sigma
+            judge=np.linalg.norm(np.array(sigma))
+            print(judge)
+            if judge<1e-5:
+                break
+
         para = {}
-        para["w"] = optimizeW.tolist()
+        para["w"] = self.w.tolist()
         para["featureFunc"] = self.featureFunc.tolist()
         para["subFeatureNum"] = self.subFeatureNum
-        para["ffTowHash"] = self.ffTowHash.tolist()
+        para["ffTowHash"] = self.ffTowHashTable.tolist()
+        para["labelNum"]=self.labelNum
         self.save(para)
+
+    def ffHashLargeSize(self, coordinate):
+        return (self.subFeatureNum) * coordinate[:,0] + coordinate[:,1]
+
+    def getEpf(self,features):
+        Epf=np.zeros(self.wDimension)
+        #Epf2=np.zeros(self.wDimension)
+        for aFeature in features:
+            pwyxList=np.squeeze(np.array([self.Pwyx(aFeature,y) for y in range(self.labelNum)]))
+            match=self.featureFunc==aFeature
+            matchCoordinate=np.argwhere(match==1)
+            temp1=self.ffHashLargeSize(matchCoordinate)
+            temp2=self.ffTowHashTable[temp1]
+            Epf[temp2]+=(1/features.shape[0])*pwyxList[matchCoordinate[:,0]]
+            # for coordinate in matchCoordinate:
+            #     Epf2[self.ffTowHashTable[self.ffHash(coordinate)]] += (1 / features.shape[0]) * pwyxList[coordinate[0]]
+            # a=sum(Epf-Epf2)
+        return Epf
 
     def save(self, para):
         super().save(para)
 
     def predict(self, features):
-        pass
+        self.loadPara()
+        result=[]
+        for aFeature in features:
+            pwyx=np.zeros(self.labelNum)
+            for label in range(self.labelNum):
+                pwyx[label]=self.Pwyx(aFeature,label)
+            result.append(np.argmax(pwyx))
+        return np.array(result)
 
     def loadPara(self):
-        pass
+        para=self.loadJson()
+        self.w=np.array(para["w"])
+        self.featureFunc=np.array(para["featureFunc"])
+        self.subFeatureNum=para["subFeatureNum"]
+        self.ffTowHashTable=np.array(para["ffTowHash"])
+        self.labelNum=para["labelNum"]
+

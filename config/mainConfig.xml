@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--main config file. When choosing models, you just need to modify the config file instead of the source codes-->
 <config>
-    <modelName>Logistic</modelName>
+    <modelName>MaximumEntropy</modelName>
     <testIndicator>accuracy_score</testIndicator>
 </config>

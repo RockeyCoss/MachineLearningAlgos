@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <maximumEntropy>
     <featureTransform>binaryFeature</featureTransform>
+    <labelTransform>zeroOneLabelTransform</labelTransform>
     <featureFunctionThreshold>0.7</featureFunctionThreshold>
 </maximumEntropy>

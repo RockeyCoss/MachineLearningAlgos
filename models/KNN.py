@@ -1,3 +1,7 @@
+import os
+from collections import deque
+import collections
+
 import numpy as np
 from models import ModelBaseClass
 import heapq as hq
@@ -5,14 +9,27 @@ from utilities import loadConfigWithName
 
 
 class KNN(ModelBaseClass):
+    def __init__(self):
+        self.tree=kdTree()
     def train(self, features: np.array, labels: np.array, *args, **dicts):
-        super().train(features, labels, *args, **dicts)
+        newFeature=np.insert(features,features.shape[1],labels,axis=1)
+        self.tree.createKdTree(newFeature)
 
     def predict(self, features: np.array):
-        super().predict(features)
+        if self.tree.root==None:
+            newFeature=self.loadPara()
+            self.tree.createKdTree(newFeature)
+        for feature in features:
+            nearestPoints=self.tree.search(feature,self.k)
+            labels=np.nearestPoints[:,nearestPoints.shape[1]-1]
+            counter=collections.Counter()
+    def save(self, para):
+        if not os.path.exists(f"../parameters"):
+            os.mkdir("../parameters")
+        np.save(f"../parameters/{self.__class__.__name__}Para.npy",para)
 
     def loadPara(self):
-        super().loadPara()
+        return np.load(f"../parameters/{self.__class__.__name__}Para.npy")
 
 
 # -----------------------UTILITIES-----------------------#
@@ -21,9 +38,13 @@ class DisPPair:
     def __init__(self, dis: float, point: np.ndarray):
         self.pair = (dis, point)
 
-    def getValueOfAxis(self, axis: int):
-        return self.pair[1][axis]
+    @property
+    def dis(self):
+        return self.pair[0]
 
+    @property
+    def point(self):
+        return self.pair[1]
     # compare
     def __eq__(self, other):
         if self.pair[0] == other.pair[0]:
@@ -102,9 +123,20 @@ class maxHeapWithLength:
         else:
             return -self.heap[0]
 
+    def extractPoints(self)->np.ndarray:
+        pointList=[pair.point.reshape(1,-1) for pair in self.heap]
+        return np.concatenate(pointList,axis=0)
+
     def __len__(self):
         return len(self.heap)
 
+class Stack(deque):
+    def push(self,element):
+        super(Stack,self).append(element)
+
+    @property
+    def isEmpty(self):
+        return not bool(self)
 
 class Node:
     def __init__(self, points: np.ndarray = None, father=None, lChild=None, rChild=None, axis: int = None):
@@ -180,35 +212,83 @@ class kdTree:
 
         return
 
+    def __calDis(self, currentPoint: np.ndarray, point: np.ndarray) -> float:
+        """
+        :param currentPoint: point with label in its last column
+        :param point:
+        :return: Euclidean distance
+        """
+        return np.linalg.norm(currentPoint[:currentPoint.shape[0] - 1] - point)
+
     def search(self, point: np.ndarray, k: int) -> np.ndarray:
         if self.root == None:
             return np.array([])
 
         pointHeap = maxHeapWithLength(k)
-        calDis = lambda currentPoint, point: np.linalg.norm(currentPoint[:currentPoint.shape[0] - 1] - point)
+        stack=Stack()
+        currentNode =self.__searchAlongTheTree(self.root,point,pointHeap,stack)
+        logNode=None
+        # kd树是平衡树，不确定当一个节点只有左子节点/右子节点的时候还要不要搜索下去
+        # 这里选择无视判断去叶节点。反正是平衡树顶多深了一层
+        while not stack.isEmpty:
+            toSearch=False
+            fatherNode=stack.pop()
+            if fatherNode==self.root:
+                logNode=currentNode
+            fatherNodeAxis = fatherNode.axis
+            for aPoint in fatherNode.points:
+                newPair = DisPPair(self.__calDis(aPoint, point), aPoint)
+                pointHeap.push(newPair)
+            disWithSuperRectangle = np.abs(fatherNode.points[0, fatherNodeAxis] - point[fatherNodeAxis])
+            # circle intersect with rectangle
+            if pointHeap.peek().dis > disWithSuperRectangle:
+                if fatherNode.lChild == currentNode:
+                    nextNode = fatherNode.rChild
+                else:
+                    nextNode = fatherNode.lChild
+                currentNode=nextNode
+                toSearch=True
+            #如果要退出搜索了heap还没满，则去root的另一子树
+            elif currentNode==self.root and not pointHeap.isFull():
+                if logNode==self.root.lChild:
+                    nextNode=self.root.rChild
+                else:
+                    nextNode=self.root.lChild
+                currentNode=nextNode
+                toSearch=True
+            else:
+                currentNode=fatherNode
+            if toSearch:
+                currentNode=self.__searchAlongTheTree(currentNode,point,pointHeap,stack)
 
-        currentNode = self.root
+        return pointHeap.extractPoints()
+
+
+    def __searchAlongTheTree(self, currentNode: Node, point: np.ndarray, pointHeap: maxHeapWithLength,stack:Stack)->Node:
+        if currentNode==None:
+            return None
+        stack.push(currentNode)
         while True:
             judgeValue = currentNode.points[0, currentNode.axis]
             if point[currentNode.axis] < judgeValue:
                 if currentNode.lChild == None:
-                    break
+                    if currentNode.rChild != None:
+                        currentNode = currentNode.rChild
+                    else:
+                        break
                 else:
                     currentNode = currentNode.lChild
 
             else:
                 if currentNode.rChild == None:
-                    break
+                    if currentNode.lChild != None:
+                        currentNode = currentNode.lChild
+                    else:
+                        break
                 else:
                     currentNode = currentNode.rChild
-
+            stack.push(currentNode)
         for currentPoint in currentNode.points:
-            newPair = DisPPair(calDis(currentPoint, point), currentPoint)
+            newPair = DisPPair(self.__calDis(currentPoint, point), currentPoint)
             pointHeap.push(newPair)
-
-    def __recursiveBackTrack(self, currentNode: Node, pointHeap: maxHeapWithLength):
-        fatherNode = currentNode.father
-        fatherNodeAxis = fatherNode.axis
-        for aPoint in fatherNode.points:
-            disWithSuperRectangle = np.abs(pointHeap.peek().getValueOfAxis(fatherNodeAxis) - aPoint[fatherNodeAxis])
-            
+        return stack.pop()

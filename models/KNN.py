@@ -16,6 +16,7 @@ class KNN(ModelBaseClass):
     def train(self, features: np.array, labels: np.array, *args, **dicts):
         newFeature=np.insert(features,features.shape[1],labels,axis=1)
         self.tree.createKdTree(newFeature)
+        self.save(newFeature)
 
     def predict(self, features: np.array):
         if self.tree.root==None:
@@ -24,8 +25,8 @@ class KNN(ModelBaseClass):
         result=[]
         for feature in features:
             nearestPoints=self.tree.search(feature,self.k)
-            labels=np.nearestPoints[:,nearestPoints.shape[1]-1]
-            label=collections.Counter(labels).most_common(1)
+            labels=nearestPoints[:,-1]
+            label=int(collections.Counter(labels).most_common(1)[0][0])
             result.append(label)
         return np.array(result)
 
@@ -162,7 +163,8 @@ class kdTree:
             return None, features, None
         sortedData = np.array(sorted(features, key=lambda x: x[axis]))
         medianIndex = sortedData.shape[0] // 2
-        leftSame, rightSame = True
+        leftSame=True
+        rightSame = True
         leftStep = 1
         rightStep = 1
         medianValue = sortedData[medianIndex, axis]
@@ -204,13 +206,13 @@ class kdTree:
         leftData, medianData, rightData = self.__medianSplit(features, axis=axis)
         assert len(medianData.shape) == 2
         currentNode.points = medianData
-        if leftData == None:
+        if type(leftData)!=np.ndarray and leftData == None:
             currentNode.lChild = None
         else:
             currentNode.lChild = Node(father=currentNode)
             self.__createChild(leftData, currentNode.lChild, depth + 1)
 
-        if rightData == None:
+        if type(rightData)!=np.ndarray and rightData == None:
             currentNode.rChild = None
         else:
             currentNode.rChild = Node(father=currentNode)

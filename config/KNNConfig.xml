@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
 <logistic>
     <featureTransform>hogFeature</featureTransform>
-    <k>5</k>
+    <k>10</k>
 </logistic>

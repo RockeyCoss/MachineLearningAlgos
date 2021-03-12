@@ -11,6 +11,8 @@ from utilities import loadConfigWithName
 class KNN(ModelBaseClass):
     def __init__(self):
         self.tree=kdTree()
+        self.k=int(loadConfigWithName("KNNConfig", "k"))
+
     def train(self, features: np.array, labels: np.array, *args, **dicts):
         newFeature=np.insert(features,features.shape[1],labels,axis=1)
         self.tree.createKdTree(newFeature)
@@ -19,10 +21,14 @@ class KNN(ModelBaseClass):
         if self.tree.root==None:
             newFeature=self.loadPara()
             self.tree.createKdTree(newFeature)
+        result=[]
         for feature in features:
             nearestPoints=self.tree.search(feature,self.k)
             labels=np.nearestPoints[:,nearestPoints.shape[1]-1]
-            counter=collections.Counter()
+            label=collections.Counter(labels).most_common(1)
+            result.append(label)
+        return np.array(result)
+
     def save(self, para):
         if not os.path.exists(f"../parameters"):
             os.mkdir("../parameters")

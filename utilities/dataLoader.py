@@ -18,7 +18,7 @@ def loadData(modelName:str,mode:str):
         features=reader[1:901,1:].astype(np.uint8)
         labels=reader[1:901,0].astype(np.int)
 
-    if (features==None).any():
+    if type(features)!=np.ndarray and features==None or (features==None).any():
         print("data reading error")
         return None
 

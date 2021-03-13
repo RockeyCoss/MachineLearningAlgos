@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<logistic>
+<KNN>
     <featureTransform>hogFeature</featureTransform>
-    <k>10</k>
-</logistic>
+    <k>1</k>
+</KNN>

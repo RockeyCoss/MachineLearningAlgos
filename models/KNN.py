@@ -10,30 +10,30 @@ from utilities import loadConfigWithName
 
 class KNN(ModelBaseClass):
     def __init__(self):
-        self.tree=kdTree()
-        self.k=int(loadConfigWithName("KNNConfig", "k"))
+        self.tree = kdTree()
+        self.k = int(loadConfigWithName("KNNConfig", "k"))
 
     def train(self, features: np.array, labels: np.array, *args, **dicts):
-        newFeature=np.insert(features,features.shape[1],labels,axis=1)
+        newFeature = np.insert(features, features.shape[1], labels, axis=1)
         self.tree.createKdTree(newFeature)
         self.save(newFeature)
 
     def predict(self, features: np.array):
-        if self.tree.root==None:
-            newFeature=self.loadPara()
+        if self.tree.root == None:
+            newFeature = self.loadPara()
             self.tree.createKdTree(newFeature)
-        result=[]
+        result = []
         for feature in features:
-            nearestPoints=self.tree.search(feature,self.k)
-            labels=nearestPoints[:,-1]
-            label=int(collections.Counter(labels).most_common(1)[0][0])
+            nearestPoints = self.tree.search(feature, self.k)
+            labels = nearestPoints[:, -1]
+            label = int(collections.Counter(labels).most_common(1)[0][0])
             result.append(label)
         return np.array(result)
 
     def save(self, para):
         if not os.path.exists(f"../parameters"):
             os.mkdir("../parameters")
-        np.save(f"../parameters/{self.__class__.__name__}Para.npy",para)
+        np.save(f"../parameters/{self.__class__.__name__}Para.npy", para)
 
     def loadPara(self):
         return np.load(f"../parameters/{self.__class__.__name__}Para.npy")
@@ -52,6 +52,7 @@ class DisPPair:
     @property
     def point(self):
         return self.pair[1]
+
     # compare
     def __eq__(self, other):
         if self.pair[0] == other.pair[0]:
@@ -108,7 +109,7 @@ class maxHeapWithLength:
             hq.heappush(self.heap, -element)
             return True
         else:
-            if -self.heap[0] <= element:
+            if -self.heap[0] < element:
                 return False
             else:
                 hq.heappop(self.heap)
@@ -130,20 +131,22 @@ class maxHeapWithLength:
         else:
             return -self.heap[0]
 
-    def extractPoints(self)->np.ndarray:
-        pointList=[pair.point.reshape(1,-1) for pair in self.heap]
-        return np.concatenate(pointList,axis=0)
+    def extractPoints(self) -> np.ndarray:
+        pointList = [pair.point.reshape(1, -1) for pair in self.heap]
+        return np.concatenate(pointList, axis=0)
 
     def __len__(self):
         return len(self.heap)
 
+
 class Stack(deque):
-    def push(self,element):
-        super(Stack,self).append(element)
+    def push(self, element):
+        super(Stack, self).append(element)
 
     @property
     def isEmpty(self):
         return not bool(self)
+
 
 class Node:
     def __init__(self, points: np.ndarray = None, father=None, lChild=None, rChild=None, axis: int = None):
@@ -153,17 +156,39 @@ class Node:
         self.rChild: Node = rChild
         self.axis: int = axis
 
+    def __repr__(self):
+        if type(self.points) != np.ndarray and self.points == None:
+            return "-------NODE-------\n"
+        returnString = "-------NODE-------\n"
+
+        for point in self.points:
+            returnString += str(point) + "\n"
+        return returnString
+
 
 class kdTree:
     def __init__(self, root=None):
         self.root = root
+
+    def __repr__(self):
+        returnString = "----------kd tree----------\n"
+        returnString += self.depthFirstTraverse(self.root)
+        return returnString
+
+    def depthFirstTraverse(self, currentNode: Node):
+        if currentNode == None:
+            return ""
+        returnStr = str(currentNode) + '\n'
+        returnStr += self.depthFirstTraverse(currentNode.lChild)
+        returnStr += self.depthFirstTraverse(currentNode.rChild)
+        return returnStr
 
     def __medianSplit(self, features: np.ndarray, axis: int):
         if features.shape[0] == 1:
             return None, features, None
         sortedData = np.array(sorted(features, key=lambda x: x[axis]))
         medianIndex = sortedData.shape[0] // 2
-        leftSame=True
+        leftSame = True
         rightSame = True
         leftStep = 1
         rightStep = 1
@@ -206,13 +231,13 @@ class kdTree:
         leftData, medianData, rightData = self.__medianSplit(features, axis=axis)
         assert len(medianData.shape) == 2
         currentNode.points = medianData
-        if type(leftData)!=np.ndarray and leftData == None:
+        if type(leftData) != np.ndarray and leftData == None:
             currentNode.lChild = None
         else:
             currentNode.lChild = Node(father=currentNode)
             self.__createChild(leftData, currentNode.lChild, depth + 1)
 
-        if type(rightData)!=np.ndarray and rightData == None:
+        if type(rightData) != np.ndarray and rightData == None:
             currentNode.rChild = None
         else:
             currentNode.rChild = Node(father=currentNode)
@@ -233,16 +258,16 @@ class kdTree:
             return np.array([])
 
         pointHeap = maxHeapWithLength(k)
-        stack=Stack()
-        currentNode =self.__searchAlongTheTree(self.root,point,pointHeap,stack)
-        logNode=None
+        stack = Stack()
+        currentNode = self.__searchAlongTheTree(self.root, point, pointHeap, stack)
+        logNode = None
         # kd树是平衡树，不确定当一个节点只有左子节点/右子节点的时候还要不要搜索下去
         # 这里选择无视判断去叶节点。反正是平衡树顶多深了一层
         while not stack.isEmpty:
-            toSearch=False
-            fatherNode=stack.pop()
-            if fatherNode==self.root:
-                logNode=currentNode
+            toSearch = False
+            fatherNode = stack.pop()
+            if fatherNode == self.root:
+                logNode = currentNode
             fatherNodeAxis = fatherNode.axis
             for aPoint in fatherNode.points:
                 newPair = DisPPair(self.__calDis(aPoint, point), aPoint)
@@ -254,26 +279,34 @@ class kdTree:
                     nextNode = fatherNode.rChild
                 else:
                     nextNode = fatherNode.lChild
-                currentNode=nextNode
-                toSearch=True
-            #如果要退出搜索了heap还没满，则去root的另一子树
-            elif currentNode==self.root and not pointHeap.isFull():
-                if logNode==self.root.lChild:
-                    nextNode=self.root.rChild
+                currentNode = nextNode
+                toSearch = True
+            # 如果要退出搜索了heap还没满，则去root的另一子树
+            elif currentNode == self.root and not pointHeap.isFull():
+                if logNode == self.root.lChild:
+                    nextNode = self.root.rChild
                 else:
-                    nextNode=self.root.lChild
-                currentNode=nextNode
-                toSearch=True
+                    nextNode = self.root.lChild
+                currentNode = nextNode
+                toSearch = True
             else:
-                currentNode=fatherNode
+                currentNode = fatherNode
             if toSearch:
-                currentNode=self.__searchAlongTheTree(currentNode,point,pointHeap,stack)
+                currentNode = self.__searchAlongTheTree(currentNode, point, pointHeap, stack)
 
         return pointHeap.extractPoints()
 
-
-    def __searchAlongTheTree(self, currentNode: Node, point: np.ndarray, pointHeap: maxHeapWithLength,stack:Stack)->Node:
-        if currentNode==None:
+    def __searchAlongTheTree(self, currentNode: Node, point: np.ndarray, pointHeap: maxHeapWithLength,
+                             stack: Stack) -> Node:
+        """
+        locate to the leaf node
+        :param currentNode:
+        :param point:
+        :param pointHeap:
+        :param stack:
+        :return:
+        """
+        if currentNode == None:
             return None
         stack.push(currentNode)
         while True:
@@ -300,3 +333,12 @@ class kdTree:
             newPair = DisPPair(self.__calDis(currentPoint, point), currentPoint)
             pointHeap.push(newPair)
         return stack.pop()
+
+
+if __name__ == '__main__':
+    data = np.array([[7, 2, 0], [5, 4, 1], [9, 6, 0], [2, 3, 2], [4, 7, 3], [8, 1, 0]])
+    tree = kdTree()
+    tree.createKdTree(data)
+    result = tree.search(np.array([0, 10]), 4)
+    #print(tree)
+    print(result)

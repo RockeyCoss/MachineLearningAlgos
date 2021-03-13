@@ -1,4 +1,8 @@
 <?xml version="1.0"?>
 <naiveBayesian>
     <featureTransform>binaryFeature</featureTransform>
+    <lambdaPara>1</lambdaPara>
+    <classNum>10</classNum>
+    <featureNum>784</featureNum>
+    <featurePossibleValueNum>2</featurePossibleValueNum>
 </naiveBayesian>

@@ -6,7 +6,8 @@ from models import ModelBaseClass
 import heapq as hq
 from utilities import loadConfigWithName
 
-#测试中使用kd树比线性搜索节省了2/3的时间
+
+# 测试中使用kd树比线性搜索节省了2/3的时间
 class KNN(ModelBaseClass):
     def __init__(self):
         self.tree = kdTree()
@@ -44,6 +45,7 @@ class DisPPair:
     """
     同时存放距离和点的数据结构
     """
+
     def __init__(self, dis: float, point: np.ndarray):
         self.pair = (dis, point)
 
@@ -102,6 +104,7 @@ class maxHeapWithLength:
     """
     由于python只有小顶堆，通过存放负值来实现大顶堆
     """
+
     def __init__(self, length):
         self.heap = []
         self.length = length
@@ -143,14 +146,16 @@ class maxHeapWithLength:
     def __len__(self):
         return len(self.heap)
 
+
 class Node:
-    def __init__(self, points: np.ndarray = None, father=None, lChild=None, rChild=None, axis: int = -1,index:int=-1):
+    def __init__(self, points: np.ndarray = None, father=None, lChild=None, rChild=None, axis: int = -1,
+                 index: int = -1):
         self.points: np.ndarray = points
         self.father: Node = father
         self.lChild: Node = lChild
         self.rChild: Node = rChild
         self.axis: int = axis
-        self.index:int=index
+        self.index: int = index
 
     def __repr__(self):
         if type(self.points) != np.ndarray and self.points == None:
@@ -166,7 +171,7 @@ class kdTree:
 
     def __init__(self, root=None):
         self.root = root
-        self.nodeIndex=0
+        self.nodeIndex = 0
 
     def __repr__(self):
         returnString = "----------kd tree----------\n"
@@ -218,9 +223,11 @@ class kdTree:
     def createKdTree(self, features: np.ndarray):
         """
         Attention:The features here is actually [feature,label]
+        这样每个样例都包含了label，在kd树中匹配到最近k个点后可以直接从特征向量的最后一位读出其对应label，节省时间
         """
+        # 给每个node编号，方便搜索时visited布尔向量的建立
         self.root = Node(index=self.nodeIndex)
-        self.nodeIndex+=1
+        self.nodeIndex += 1
         assert type(features) == np.ndarray and len(features.shape) == 2
         self.__createChild(features, self.root, 0)
 
@@ -233,15 +240,15 @@ class kdTree:
         if type(leftData) != np.ndarray and leftData == None:
             currentNode.lChild = None
         else:
-            currentNode.lChild = Node(father=currentNode,index=self.nodeIndex)
-            self.nodeIndex+=1
+            currentNode.lChild = Node(father=currentNode, index=self.nodeIndex)
+            self.nodeIndex += 1
             self.__createChild(leftData, currentNode.lChild, depth + 1)
 
         if type(rightData) != np.ndarray and rightData == None:
             currentNode.rChild = None
         else:
-            currentNode.rChild = Node(father=currentNode,index=self.nodeIndex)
-            self.nodeIndex+=1
+            currentNode.rChild = Node(father=currentNode, index=self.nodeIndex)
+            self.nodeIndex += 1
             self.__createChild(rightData, currentNode.rChild, depth + 1)
 
         return
@@ -257,26 +264,27 @@ class kdTree:
     def search(self, point: np.ndarray, k: int) -> np.ndarray:
         if self.root == None:
             return np.array([])
-
-        visited=[False for dummy in range(self.nodeIndex)]
+        # 通过node的index对应的位置中存储的布尔值来判定是否被访问过，这样判定可以在O(1)时间内完成，
+        # 避免了每次都要在visited数组中通过线性搜索判定是否visited过
+        visited = [False for dummy in range(self.nodeIndex)]
         pointHeap = maxHeapWithLength(k)
-        currentNode = self.__searchAlongTheTree(self.root, point, pointHeap,visited)
+        currentNode = self.__searchAlongTheTree(self.root, point, pointHeap, visited)
         logNode = None
         # kd树是平衡树，不确定遇到单子的节点时还要不要搜索下去
         # 这里选择无视坐标轴大小的判断去叶节点。
-        while currentNode.father!=None:
+        while currentNode.father != None:
             toSearch = False
             fatherNode = currentNode.father
-            #记录上一个搜索的是root的哪一边
+            # 记录上一个搜索的是root的哪一边
             if fatherNode == self.root:
                 logNode = currentNode
-            if visited[fatherNode.index]==False:
+            if visited[fatherNode.index] == False:
                 fatherNodeAxis = fatherNode.axis
-                #将父节点中存储的点push如heap中，并判断是否要探访其另一个子节点
+                # 将父节点中存储的点push如heap中，并判断是否要探访其另一个子节点
                 for aPoint in fatherNode.points:
                     newPair = DisPPair(self.__calDis(aPoint, point), aPoint)
                     pointHeap.push(newPair)
-                visited[fatherNode.index]=True
+                visited[fatherNode.index] = True
 
                 disWithSuperRectangle = np.abs(fatherNode.points[0, fatherNodeAxis] - point[fatherNodeAxis])
                 # circle intersect with rectangle
@@ -285,10 +293,10 @@ class kdTree:
                         nextNode = fatherNode.rChild
                     else:
                         nextNode = fatherNode.lChild
-                    if nextNode!=None:
+                    if nextNode != None:
                         currentNode = nextNode
                         toSearch = True
-                    #单子树情况：
+                    # 单子树情况：
                     else:
                         currentNode = fatherNode
 
@@ -303,20 +311,16 @@ class kdTree:
                 else:
                     currentNode = fatherNode
                 if toSearch:
-                    currentNode = self.__searchAlongTheTree(currentNode, point, pointHeap,visited)
+                    currentNode = self.__searchAlongTheTree(currentNode, point, pointHeap, visited)
             else:
-                currentNode=fatherNode
+                currentNode = fatherNode
 
         return pointHeap.extractPoints()
 
-    def __searchAlongTheTree(self, currentNode: Node, point: np.ndarray, pointHeap: maxHeapWithLength,visited:list) -> Node:
+    def __searchAlongTheTree(self, currentNode: Node, point: np.ndarray, pointHeap: maxHeapWithLength,
+                             visited: list) -> Node:
         """
         locate to the leaf node
-        :param currentNode:
-        :param point:
-        :param pointHeap:
-        :param stack:
-        :return:
         """
         if currentNode == None:
             return None
@@ -340,7 +344,7 @@ class kdTree:
                 else:
                     currentNode = currentNode.rChild
 
-        visited[currentNode.index]=True
+        visited[currentNode.index] = True
         for currentPoint in currentNode.points:
             newPair = DisPPair(self.__calDis(currentPoint, point), currentPoint)
             pointHeap.push(newPair)

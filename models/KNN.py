@@ -1,5 +1,4 @@
 import os
-from collections import deque
 import collections
 
 import numpy as np
@@ -42,6 +41,9 @@ class KNN(ModelBaseClass):
 # -----------------------UTILITIES-----------------------#
 
 class DisPPair:
+    """
+    同时存放距离和点的数据结构
+    """
     def __init__(self, dis: float, point: np.ndarray):
         self.pair = (dis, point)
 
@@ -97,6 +99,9 @@ class DisPPair:
 
 
 class maxHeapWithLength:
+    """
+    由于python只有小顶堆，通过存放负值来实现大顶堆
+    """
     def __init__(self, length):
         self.heap = []
         self.length = length
@@ -158,6 +163,7 @@ class Node:
 
 
 class kdTree:
+
     def __init__(self, root=None):
         self.root = root
         self.nodeIndex=0
@@ -256,11 +262,12 @@ class kdTree:
         pointHeap = maxHeapWithLength(k)
         currentNode = self.__searchAlongTheTree(self.root, point, pointHeap,visited)
         logNode = None
-        # kd树是平衡树，不确定当一个节点只有左子节点/右子节点的时候还要不要搜索下去
-        # 这里选择无视判断去叶节点。反正是平衡树顶多深了一层
+        # kd树是平衡树，不确定遇到单子的节点时还要不要搜索下去
+        # 这里选择无视坐标轴大小的判断去叶节点。
         while currentNode.father!=None:
             toSearch = False
             fatherNode = currentNode.father
+            #记录上一个搜索的是root的哪一边
             if fatherNode == self.root:
                 logNode = currentNode
             if visited[fatherNode.index]==False:
@@ -270,6 +277,7 @@ class kdTree:
                     newPair = DisPPair(self.__calDis(aPoint, point), aPoint)
                     pointHeap.push(newPair)
                 visited[fatherNode.index]=True
+
                 disWithSuperRectangle = np.abs(fatherNode.points[0, fatherNodeAxis] - point[fatherNodeAxis])
                 # circle intersect with rectangle
                 if pointHeap.peek().dis > disWithSuperRectangle:

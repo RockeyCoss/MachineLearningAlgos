@@ -31,7 +31,7 @@ Use the MNIST dataset to validate the algorithms.
   >
   > The derivative of the likelihood function is different from that written in *Statistical Learning Methods* . For MNIST dataset, the derivative is:
   >
-  > <img src="E:\学习笔记\machine_learning\machineLearningFrame\README.assets\derivative-1615695073673.png" alt="derivative" style="zoom:40%;" />
+  > <img src="https://github.com/RockeyCoss/machineLearningImplementation/blob/main/README.assets/derivative.png" alt="derivative" style="zoom:40%;" />
 
   
 

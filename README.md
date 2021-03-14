@@ -9,7 +9,7 @@ Use the MNIST dataset to validate the algorithms.
 
 ----
 
-### Currently Implemented:
+### Already Implemented:
 
 * [Perceptron](https://github.com/RockeyCoss/machineLearningImplementation/blob/main/models/Perceptron.py)
 

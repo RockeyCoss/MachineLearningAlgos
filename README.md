@@ -23,7 +23,7 @@ Use the MNIST dataset to validate the algorithms.
 
   > Use either SGD or quasi-Newton to optimize the target function.
   >
-  > When using quasi-Newton, some numerical problems may be encountered. This bug has not been fixed yet. （懒得修了，以后再说吧md）
+  > When using quasi-Newton, some numerical problems may be encountered. This bug has not been fixed yet. （以后再说吧呜呜呜）
 
 * [Maximum Entropy](https://github.com/RockeyCoss/machineLearningImplementation/blob/main/models/MaximumEntropy.py)
 

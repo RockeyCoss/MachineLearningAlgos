@@ -16,7 +16,7 @@ class NaiveBayesian(ModelBaseClass):
         self.featurePossibleValueNum = loadConfigWithName("NaiveBayesian", "featurePossibleValueNum")
         self.Py = None
         self.Pxy = None
-        
+
     def train(self, features, labels, *args, **dicts):
         # estimate P(Y=ck)
         labelCount = collections.Counter(labels)

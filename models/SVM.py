@@ -2,13 +2,17 @@ import numpy as np
 import json
 import sklearn
 from models import ModelBaseClass
-
+# refer to Statistical Learning Methods and
+# paper Sequential Minimal Optimization:A Fast Algorithm for Training Support Vector Machines
 
 class SVM(ModelBaseClass):
     def __init__(self):
-        self.rbfGamma = 0
-        self.sampleNum = 0
-        self.C = 1
+        self.rbfGamma:float = 0
+        self.sampleNum:int = 0
+        self.C:float = 1
+        self.epsilon:float = 1e-3
+        self.alhpa:np.ndarray=None
+        self.features=None
 
     def rbf(self, x1, x2):
         """
@@ -33,6 +37,8 @@ class SVM(ModelBaseClass):
         self.rbfGamma = features.shape[1] if features.shape[1] > 0 else 1
         self.sampleNum = features.shape[0]
         self.C = dicts['C'] if 'C' in dicts.keys() else 1
+        self.alhpa=np.zeros(self.sampleNum)
+        self.features=features
 
     def predict(self, features: np.array):
         super().predict(features)
@@ -41,3 +47,11 @@ class SVM(ModelBaseClass):
 
     def loadPara(self):
         super().loadPara()
+
+    def __trainer(self):
+        examineAll:bool=True
+        changedNum=0
+        while changedNum>0 or examineAll==True:
+            changedNum=0
+            if examineAll:
+

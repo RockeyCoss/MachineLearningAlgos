@@ -1,6 +1,9 @@
+import importlib
+
 import numpy as np
 from models import ModelBaseClass
-from utilities import loadConfigWithName
+from utilities import loadConfigWithName, loadData, loadMainConfig
+
 
 # refer to Statistical Learning Methods and
 # paper Sequential Minimal Optimization:A Fast Algorithm for Training Support Vector Machines
@@ -9,13 +12,12 @@ from utilities import loadConfigWithName
 # non-bound examples: examples with alphas that are neither 0 nor C
 
 
-
 class SVM(ModelBaseClass):
     def __init__(self):
         self.rbfGamma: float = 0
         self.sampleNum: int = 0
         self.C: float = float(loadConfigWithName("SVMConfig", "C"))
-        self.rbfGamma:float=0
+        self.rbfGamma: float = 0
         self.epsilon: float = 1e-3
         self.alpha: np.ndarray = None
         self.b: float = None
@@ -24,9 +26,9 @@ class SVM(ModelBaseClass):
         self.wx: np.ndarray = None
         self.kernelMatrix: np.ndarray = None
         self.alphaNot0NorC: list = None
-        self.eps:float = 1e-7
-        self.alphay:np.ndarray=None
-        self.supportVector:np.ndarray=None
+        self.eps: float = 1e-7
+        self.alphay: np.ndarray = None
+        self.supportVector: np.ndarray = None
 
     def rbf(self, x1, x2):
         """
@@ -51,7 +53,7 @@ class SVM(ModelBaseClass):
         if gamma == "auto":
             self.rbfGamma = features.shape[1] if features.shape[1] > 0 else 1
         else:
-            self.rbfGamma=float(gamma)
+            self.rbfGamma = float(gamma)
         self.sampleNum = features.shape[0]
         self.alpha = np.zeros(self.sampleNum)
         self.b = 0
@@ -64,27 +66,27 @@ class SVM(ModelBaseClass):
         # Ei=wx[i]+b-y[i]
         self.wx = np.zeros(self.sampleNum)
         self.__trainer()
-        para={}
-        supportVectorIndex=np.where(self.alpha>0+self.eps)
-        para["alpha*y"]=(self.alpha[supportVectorIndex]*self.labels[supportVectorIndex]).tolist()
-        para["supportVector"]=self.features[supportVectorIndex].tolist()
-        para["b"]=self.b
+        para = {}
+        supportVectorIndex = np.where(self.alpha > 0 + self.eps)
+        para["alpha*y"] = (self.alpha[supportVectorIndex] * self.labels[supportVectorIndex]).tolist()
+        para["supportVector"] = self.features[supportVectorIndex].tolist()
+        para["b"] = self.b
         self.save(para)
 
     def predict(self, features: np.array):
         self.loadPara()
         result = []
         for aFeature in features:
-            kernel=np.exp(-np.sum(np.power((self.supportVector - aFeature), 2),axis=1) / self.rbfGamma)
-            linear=np.sum(self.alphay*kernel)+self.b
+            kernel = np.exp(-np.sum(np.power((self.supportVector - aFeature), 2), axis=1) / self.rbfGamma)
+            linear = np.sum(self.alphay * kernel) + self.b
             result.append(-1 if linear < 0 else 1)
         return np.array(result)
 
     def loadPara(self):
         para = self.loadJson()
-        self.b=para["b"]
-        self.alphay=np.array(para["alpha*y"])
-        self.supportVector=np.array(para["supportVector"])
+        self.b = para["b"]
+        self.alphay = np.array(para["alpha*y"])
+        self.supportVector = np.array(para["supportVector"])
         self.rbfGamma = self.supportVector.shape[1] if self.supportVector.shape[1] > 0 else 1
 
     def __trainer(self):
@@ -100,10 +102,6 @@ class SVM(ModelBaseClass):
                     changedNum += self.__examine(sampleIndex)
 
             examineAll = False if examineAll else True
-
-    def __getI1Heuristically(self, E2):
-        if E2 >= 0:
-            return np.argmax(self.wx + self.b - self.labels)
 
     def __examine(self, sampleIndex: int) -> int:
         y2 = self.labels[sampleIndex]
@@ -136,7 +134,7 @@ class SVM(ModelBaseClass):
                     return 1
 
             # SMO can't make positive progress using alpha1Index
-            if alphaNot0NorClength>0:
+            if alphaNot0NorClength > 0:
                 start = np.random.randint(low=0, high=alphaNot0NorClength)
                 for delta in range(0, alphaNot0NorClength):
                     indexOfAnotherIndex = (start + delta) % alphaNot0NorClength
@@ -155,7 +153,7 @@ class SVM(ModelBaseClass):
                 if self.__optimize(desperateIndex, sampleIndex):
                     return 1
             # give up optimizing alpha[sampleIndex]
-            return 0
+            return 1
         else:
             # satisfied
             return 0
@@ -164,12 +162,13 @@ class SVM(ModelBaseClass):
         if alpha2Index == alpha1Index:
             return False
         alpha1 = self.alpha[alpha1Index]
+        alpha2 = self.alpha[alpha2Index]
         y1 = self.labels[alpha1Index]
         y2 = self.labels[alpha2Index]
         E1 = self.wx[alpha1Index] + self.b - self.labels[alpha1Index]
         E2 = self.wx[alpha2Index] + self.b - self.labels[alpha2Index]
         s = y1 * y2
-        alpha2 = self.alpha[alpha2Index]
+
         # y1 equals to y2
         if s == 1:
             L = max(0, alpha2 + alpha1 - self.C)
@@ -219,22 +218,45 @@ class SVM(ModelBaseClass):
         K22 = self.kernelMatrix[alpha2Index, alpha2Index]
         b1 = E1 + y1 * (a1 - alpha1) * K11 + y2 * (a2 - alpha2) * K12 + self.b
         b2 = E2 + y1 * (a1 - alpha1) * K11 + y2 * (a2 - alpha2) * K22 + self.b
+
+        missCount = 0
         if 0 < a1 < self.C:
-            tempSet=set(self.alphaNot0NorC)
+            tempSet = set(self.alphaNot0NorC)
             tempSet.add(alpha1Index)
             self.alphaNot0NorC = list(tempSet)
             self.b = b1
+        else:
+            if alpha1Index in self.alphaNot0NorC:
+                self.alphaNot0NorC.remove(alpha1Index)
+            missCount += 1
         if 0 < a2 < self.C:
             tempSet = set(self.alphaNot0NorC)
             tempSet.add(alpha2Index)
-            self.alphaNot0NorC=list(tempSet)
+            self.alphaNot0NorC = list(tempSet)
             self.b = b2
         else:
+            if alpha2Index in self.alphaNot0NorC:
+                self.alphaNot0NorC.remove(alpha2Index)
+            missCount += 1
+        if missCount == 2:
             self.b = (b1 + b2) / 2
         self.alpha[alpha1Index] = a1
         self.alpha[alpha2Index] = a2
         # to reduce computation, use derivative*delta to compute the increment of wx.
         self.wx += (a1 - alpha1) * self.kernelMatrix[alpha1Index] * self.labels[alpha1Index] + \
                    (a2 - alpha2) * self.kernelMatrix[alpha2Index] * self.labels[alpha2Index]
+        # self.wx=np.sum(self.alpha*self.labels*self.kernelMatrix,axis=1)
 
         return 1
+
+if __name__ == '__main__':
+    features, labels = loadData(loadMainConfig("modelName"), "train")
+    model = SVM()
+    model.train(features, labels)
+
+    predictResult = model.predict(features)
+
+    sklearnMetricModule = importlib.import_module("sklearn.metrics")
+    indicator = getattr(sklearnMetricModule, loadMainConfig("testIndicator"))
+    testScore = indicator(predictResult, labels)
+    print(f"{loadMainConfig('testIndicator')} is {testScore}")

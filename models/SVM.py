@@ -19,10 +19,12 @@ class SVM(ModelBaseClass):
         self.b: float = None
         self.features: np.ndarray = None
         self.labels: np.ndarray = None
-        self.wx:np.ndarray=None
+        self.wx: np.ndarray = None
         self.kernelMatrix: np.ndarray = None
         self.alphaNot0NorC: list = None
-        self.eps = 1e-7
+        self.eps:float = 1e-7
+        self.alphay:np.ndarray=None
+        self.supportVector:np.ndarray=None
 
     def rbf(self, x1, x2):
         """
@@ -30,7 +32,7 @@ class SVM(ModelBaseClass):
         """
         return np.exp(-np.sum(np.power((x1 - x2), 2)) / self.rbfGamma)
 
-    def getKernelMatrix(self, kernel) -> np.ndarray:
+    def __getKernelMatrix(self, kernel) -> np.ndarray:
         """
         计算K(xi,xj)矩阵
         :param kernel: 核函数
@@ -50,18 +52,35 @@ class SVM(ModelBaseClass):
         self.b = 0
         self.features = features
         self.labels = labels
-        self.kernelMatrix = self.getKernelMatrix()
+        self.kernelMatrix = self.__getKernelMatrix()
         # hot data
         self.alphaNot0NorC = []
         # the actual time consuming computation
         # Ei=wx[i]+b-y[i]
         self.wx = np.zeros(self.sampleNum)
+        self.__trainer()
+        para={}
+        supportVectorIndex=np.where(self.alpha>0+self.eps)
+        para["alpha*y"]=(self.alpha[supportVectorIndex]*self.labels[supportVectorIndex]).tolist()
+        para["supportVector"]=self.features[supportVectorIndex].tolist()
+        para["b"]=self.b
+        self.save(para)
 
     def predict(self, features: np.array):
-        super().predict(features)
+        self.loadPara()
+        result = []
+        for aFeature in features:
+            kernel=np.exp(-np.sum(np.power((self.supportVector - aFeature), 2),axis=1) / self.rbfGamma)
+            linear=np.sum(self.alphay*kernel)+self.b
+            result.append(-1 if linear < 0 else 1)
+        return np.array(result)
 
     def loadPara(self):
-        super().loadPara()
+        para = self.loadJson()
+        self.b=para["b"]
+        self.alphay=np.array(para["alpha*y"])
+        self.supportVector=np.array(para["supportVector"])
+        self.rbfGamma = self.supportVector.shape[1] if self.supportVector.shape[1] > 0 else 1
 
     def __trainer(self):
         examineAll: bool = True
@@ -192,19 +211,20 @@ class SVM(ModelBaseClass):
         K11 = self.kernelMatrix[alpha1Index, alpha1Index]
         K12 = self.kernelMatrix[alpha1Index, alpha2Index]
         K22 = self.kernelMatrix[alpha2Index, alpha2Index]
-        b1=E1+y1*(a1-alpha1)*K11+y2*(a2-alpha2)*K12+self.b
-        b2=E2+y1*(a1-alpha1)*K11+y2*(a2-alpha2)*K22+self.b
-        if 0<a1<self.C:
+        b1 = E1 + y1 * (a1 - alpha1) * K11 + y2 * (a2 - alpha2) * K12 + self.b
+        b2 = E2 + y1 * (a1 - alpha1) * K11 + y2 * (a2 - alpha2) * K22 + self.b
+        if 0 < a1 < self.C:
             self.alphaNot0NorC.append(alpha1Index)
-            self.b=b1
-        if 0<a2<self.C:
+            self.b = b1
+        if 0 < a2 < self.C:
             self.alphaNot0NorC.append(alpha2Index)
-            self.b=b2
+            self.b = b2
         else:
-            self.b=(b1+b2)/2
-        self.alpha[alpha1Index]=a1
-        self.alpha[alpha2Index]=a2
-        self.wx+=(a1-alpha1)*self.kernelMatrix[alpha1Index]*self.labels[alpha1Index]+\
-                 (a2-alpha2)*self.kernelMatrix[alpha2Index]*self.labels[alpha2Index]
+            self.b = (b1 + b2) / 2
+        self.alpha[alpha1Index] = a1
+        self.alpha[alpha2Index] = a2
+        # to reduce computation, use derivative*delta to compute the increment of wx.
+        self.wx += (a1 - alpha1) * self.kernelMatrix[alpha1Index] * self.labels[alpha1Index] + \
+                   (a2 - alpha2) * self.kernelMatrix[alpha2Index] * self.labels[alpha2Index]
 
         return 1

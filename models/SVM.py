@@ -19,8 +19,10 @@ class SVM(ModelBaseClass):
         self.b: float = None
         self.features: np.ndarray = None
         self.labels: np.ndarray = None
+        self.wx:np.ndarray=None
         self.kernelMatrix: np.ndarray = None
         self.alphaNot0NorC: list = None
+        self.eps = 1e-7
 
     def rbf(self, x1, x2):
         """
@@ -51,7 +53,7 @@ class SVM(ModelBaseClass):
         self.kernelMatrix = self.getKernelMatrix()
         # hot data
         self.alphaNot0NorC = []
-        # the actural time comsuming computation
+        # the actual time consuming computation
         # Ei=wx[i]+b-y[i]
         self.wx = np.zeros(self.sampleNum)
 
@@ -164,4 +166,45 @@ class SVM(ModelBaseClass):
                 a2 = L
             elif a2 > H:
                 a2 = H
-        
+        else:
+            K11 = self.kernelMatrix[alpha1Index, alpha1Index]
+            K12 = self.kernelMatrix[alpha1Index, alpha2Index]
+            K22 = self.kernelMatrix[alpha2Index, alpha2Index]
+
+            f1 = y1 * (E1 + self.b) - alpha1 * K11 - s * alpha2 * K12
+            f2 = y2 * (E2 + self.b) - s * alpha1 * K12 - alpha2 * K22
+            L1 = alpha1 + s * (alpha2 - L)
+            H1 = alpha1 + s * (alpha2 - H)
+            psiL = L1 * f1 + L * f2 + 0.5 * L1 * L1 * K11 + 0.5 * L * L * K22 + s * L * L1 * K12
+            psiH = H1 * f1 + H * f2 + 0.5 * H1 * H1 * K11 + 0.5 * H * H * K22 + s * H * H1 * K12
+            if psiL < psiH - self.eps:
+                a2 = L
+            elif psiL > psiH + self.eps:
+                a2 = H
+            else:
+                a2 = alpha2
+
+        if np.abs(a2 - alpha2) < self.eps * (alpha2 + a2 + self.eps):
+            return 0
+
+        a1 = alpha1 + s * (alpha2 - a2)
+
+        K11 = self.kernelMatrix[alpha1Index, alpha1Index]
+        K12 = self.kernelMatrix[alpha1Index, alpha2Index]
+        K22 = self.kernelMatrix[alpha2Index, alpha2Index]
+        b1=E1+y1*(a1-alpha1)*K11+y2*(a2-alpha2)*K12+self.b
+        b2=E2+y1*(a1-alpha1)*K11+y2*(a2-alpha2)*K22+self.b
+        if 0<a1<self.C:
+            self.alphaNot0NorC.append(alpha1Index)
+            self.b=b1
+        if 0<a2<self.C:
+            self.alphaNot0NorC.append(alpha2Index)
+            self.b=b2
+        else:
+            self.b=(b1+b2)/2
+        self.alpha[alpha1Index]=a1
+        self.alpha[alpha2Index]=a2
+        self.wx+=(a1-alpha1)*self.kernelMatrix[alpha1Index]*self.labels[alpha1Index]+\
+                 (a2-alpha2)*self.kernelMatrix[alpha2Index]*self.labels[alpha2Index]
+
+        return 1

@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<SVM>
+    <featureTransform>hogFeature</featureTransform>
+    <labelTransform>minusOneAndOneLabelTransform</labelTransform>
+    <C>1</C>
+    <gamma>auto</gamma>
+</SVM>

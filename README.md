@@ -21,17 +21,17 @@ Use the MNIST dataset to validate the algorithms.
 
 * [Logistic](https://github.com/RockeyCoss/machineLearningImplementation/blob/main/models/Logistic.py)
 
-  > 1. Use either SGD or quasi-Newton to optimize the target function.
+  > Use either SGD or quasi-Newton to optimize the target function.
   >
-  > 2. When using quasi-Newton, some numerical problems may be encountered. This bug has not been fixed yet. （以后再说吧呜呜呜）
+  > When using quasi-Newton, some numerical problems may be encountered. This bug has not been fixed yet. （懒得修了，以后再说吧md）
 
 * [Maximum Entropy](https://github.com/RockeyCoss/machineLearningImplementation/blob/main/models/MaximumEntropy.py)
 
-  > 1. Use quasi-Newton to optimize the target function.
+  > Use quasi-Newton to optimize the target function.
   >
-  > 2. The derivative of the likelihood function is different from that written in *Statistical Learning Methods* . For MNIST dataset, the derivative is:
+  > The derivative of the likelihood function is different from that written in *Statistical Learning Methods* . For MNIST dataset, the derivative is:
   >
-  > <img src="https://github.com/RockeyCoss/machineLearningImplementation/blob/main/README.assets/derivative.png" alt="derivative" style="zoom:40%;" />
+  > <img src="https://github.com/RockeyCoss/machineLearningImplementation/blob/main/README.assets/derivative.png" alt="derivative" width="370" height="174" />
 
 * [SVM](https://github.com/RockeyCoss/MachineLearningAlgos/blob/main/models/SVM.py)
 
@@ -39,9 +39,9 @@ Use the MNIST dataset to validate the algorithms.
   > 2. Store the whole kernel function matrix in the memory. To save memory, I may use a LRU cache to store the kernel function matrix in the future. 
   > 3. Since computing w\*x is time consuming, I store the value of w\*x  of every sample in the memory(as a list) . When updating this list, instead of computing w\*x, I use linear approximation as follows:
   >
-  > <img src="https://github.com/RockeyCoss/MachineLearningAlgos/blob/main/README.assets/wxupdate.png" alt="derivative" style="zoom:20%;" />
+  > <img src="https://github.com/RockeyCoss/MachineLearningAlgos/blob/main/README.assets/wxupdate.png" alt="wxupdate" width="227" height="45" />
   >
-  > Then, the computation of w\*x can be completely avoided.
+  >     Then, the computation of w\*x can be completely avoided.
   >
   > 
 

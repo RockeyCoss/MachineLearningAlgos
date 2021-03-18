@@ -153,7 +153,7 @@ class SVM(ModelBaseClass):
                 if self.__optimize(desperateIndex, sampleIndex):
                     return 1
             # give up optimizing alpha[sampleIndex]
-            return 1
+            return 0
         else:
             # satisfied
             return 0
@@ -165,6 +165,7 @@ class SVM(ModelBaseClass):
         alpha2 = self.alpha[alpha2Index]
         y1 = self.labels[alpha1Index]
         y2 = self.labels[alpha2Index]
+        #may be bugs
         E1 = self.wx[alpha1Index] + self.b - self.labels[alpha1Index]
         E2 = self.wx[alpha2Index] + self.b - self.labels[alpha2Index]
         s = y1 * y2
@@ -185,7 +186,7 @@ class SVM(ModelBaseClass):
               self.kernelMatrix[alpha1Index, alpha2Index]
 
         if eta > 0:
-            a2 = alpha2 + y2 * (E1 - E2)
+            a2 = alpha2 + y2 * (E1 - E2) / eta
             if a2 < L:
                 a2 = L
             elif a2 > H:
@@ -209,7 +210,7 @@ class SVM(ModelBaseClass):
                 a2 = alpha2
 
         if np.abs(a2 - alpha2) < self.eps * (alpha2 + a2 + self.eps):
-            return 0
+            return False
 
         a1 = alpha1 + s * (alpha2 - a2)
 
@@ -247,7 +248,7 @@ class SVM(ModelBaseClass):
                    (a2 - alpha2) * self.kernelMatrix[alpha2Index] * self.labels[alpha2Index]
         # self.wx=np.sum(self.alpha*self.labels*self.kernelMatrix,axis=1)
 
-        return 1
+        return True
 
 if __name__ == '__main__':
     features, labels = loadData(loadMainConfig("modelName"), "train")

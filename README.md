@@ -41,7 +41,7 @@ Use the MNIST dataset to validate the algorithms.
   >
   > <img src="https://github.com/RockeyCoss/MachineLearningAlgos/blob/main/README.assets/wxupdate.png" alt="wxupdate" width="227" height="45" />
   >
-  >     Then, the computation of w\*x can be completely avoided.
+  > Then, the computation of w\*x can be completely avoided.
   >
   > 
 

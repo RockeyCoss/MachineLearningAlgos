@@ -21,9 +21,9 @@ Use the MNIST dataset to validate the algorithms.
 
 * [Logistic](https://github.com/RockeyCoss/machineLearningImplementation/blob/main/models/Logistic.py)
 
-  > Use either SGD or quasi-Newton to optimize the target function.
+  > 1. Use either SGD or quasi-Newton to optimize the target function.
   >
-  > When using quasi-Newton, some numerical problems may be encountered. This bug has not been fixed yet. （以后再说吧呜呜呜）
+  > 2. When using quasi-Newton, some numerical problems may be encountered. This bug has not been fixed yet. （以后再说吧呜呜呜）
 
 * [Maximum Entropy](https://github.com/RockeyCoss/machineLearningImplementation/blob/main/models/MaximumEntropy.py)
 
@@ -41,7 +41,7 @@ Use the MNIST dataset to validate the algorithms.
   >
   > <img src="https://github.com/RockeyCoss/MachineLearningAlgos/blob/main/README.assets/wxupdate.png" alt="derivative" style="zoom:20%;" />
   >
-  > ​		Then, the computation of w\*x can be completely avoided.
+  > Then, the computation of w\*x can be completely avoided.
   >
   > 
 

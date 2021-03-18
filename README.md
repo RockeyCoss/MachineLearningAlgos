@@ -1,7 +1,7 @@
 # Implementation of Some ML Algorithms 
-Implementation of the algorithms in the book *Statistical Learning Methods*  
-
 《统计学习方法》python实现
+
+Implementation of the algorithms in the book *Statistical Learning Methods*  
 
 Use the MNIST dataset to validate the algorithms.
 

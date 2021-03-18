@@ -78,7 +78,7 @@ class SVM(ModelBaseClass):
         result = []
         for aFeature in features:
             kernel = np.exp(-np.sum(np.power((self.supportVector - aFeature), 2), axis=1) / self.rbfGamma)
-            linear = np.sum(self.alphay * kernel) + self.b
+            linear = np.sum(self.alphay * kernel) - self.b
             result.append(-1 if linear < 0 else 1)
         return np.array(result)
 
@@ -106,7 +106,7 @@ class SVM(ModelBaseClass):
     def __examine(self, sampleIndex: int) -> int:
         y2 = self.labels[sampleIndex]
         alpha2 = self.alpha[sampleIndex]
-        E2 = self.wx[sampleIndex] + self.b - self.labels[sampleIndex]
+        E2 = self.wx[sampleIndex] - self.b - self.labels[sampleIndex]
         r2 = E2 * y2
         # KKT condition;
         # alphaI==0<=>yi(W*Xi+b)>=1<=>yi(W*Xi+b-yi)>=0
@@ -116,16 +116,17 @@ class SVM(ModelBaseClass):
         if (r2 < -self.epsilon and alpha2 < self.C) or (r2 > self.epsilon and alpha2 > 0):
             # not satisfied
             alphaNot0NorClength = len(self.alphaNot0NorC)
+            indexOfAlpha1Index=-1
             if alphaNot0NorClength > 1:
                 alpha1Index = -1
                 # because of the list of alphaNot0NorC, the program doesn't need to spend time computing
                 # bound examples' E
                 if E2 >= 0:
                     indexOfAlpha1Index = np.argmax(
-                        (self.wx[self.alphaNot0NorC] + self.b - self.labels[self.alphaNot0NorC]))
+                        (self.wx[self.alphaNot0NorC] - self.b - self.labels[self.alphaNot0NorC]))
                 else:
                     indexOfAlpha1Index = np.argmin(
-                        (self.wx[self.alphaNot0NorC] + self.b - self.labels[self.alphaNot0NorC]))
+                        (self.wx[self.alphaNot0NorC] - self.b - self.labels[self.alphaNot0NorC]))
 
                 alpha1Index = self.alphaNot0NorC[indexOfAlpha1Index]
                 assert alpha1Index != -1
@@ -138,7 +139,7 @@ class SVM(ModelBaseClass):
                 start = np.random.randint(low=0, high=alphaNot0NorClength)
                 for delta in range(0, alphaNot0NorClength):
                     indexOfAnotherIndex = (start + delta) % alphaNot0NorClength
-                    if indexOfAnotherIndex == indexOfAlpha1Index:
+                    if indexOfAlpha1Index!=-1 and indexOfAnotherIndex == indexOfAlpha1Index:
                         continue
                     anotherIndex = self.alphaNot0NorC[indexOfAnotherIndex]
                     if self.__optimize(anotherIndex, sampleIndex):
@@ -166,8 +167,8 @@ class SVM(ModelBaseClass):
         y1 = self.labels[alpha1Index]
         y2 = self.labels[alpha2Index]
         #may be bugs
-        E1 = self.wx[alpha1Index] + self.b - self.labels[alpha1Index]
-        E2 = self.wx[alpha2Index] + self.b - self.labels[alpha2Index]
+        E1 = self.wx[alpha1Index] - self.b - self.labels[alpha1Index]
+        E2 = self.wx[alpha2Index] - self.b - self.labels[alpha2Index]
         s = y1 * y2
 
         # y1 equals to y2

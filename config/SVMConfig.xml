@@ -2,6 +2,6 @@
 <SVM>
     <featureTransform>hogFeature</featureTransform>
     <labelTransform>minusOneAndOneLabelTransform</labelTransform>
-    <C>1</C>
+    <C>200</C>
     <gamma>auto</gamma>
 </SVM>

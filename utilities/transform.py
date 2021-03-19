@@ -38,3 +38,7 @@ def zeroOneLabelTransform(labels):
     labels[np.where(labels!=1)]=0
     return labels
 
+def lessThan5Seperate(labels):
+    labels[np.where(labels<=5)]=-1
+    labels[np.where(labels>5)]=1
+    return labels

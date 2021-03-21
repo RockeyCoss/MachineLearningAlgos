@@ -3,7 +3,7 @@ from models import ModelBaseClass
 
 
 
-class Perceptron(ModelBaseClass):
+class AdaBoost(ModelBaseClass):
     def __init__(self,lr=0.01):
         self.lr=lr
         self.alpha=None
@@ -18,6 +18,13 @@ class Perceptron(ModelBaseClass):
 
     def loadPara(self):
         super().loadPara()
+
+class DesicionStump:
+    def __init__(self,step=0.01):
+        self.step=step
+
+    def train(self,features:np.ndarray,weight:np.ndarray):
+        
 
 
 if __name__ == "__main__":

@@ -24,7 +24,9 @@ class DesicionStump:
         self.step=step
 
     def train(self,features:np.ndarray,weight:np.ndarray):
-        
+        for column in features.shape[1]:
+            for seperateValue in np.arange(np.min(features[:,column]),np.max(features[:,column]),self.step):
+                
 
 
 if __name__ == "__main__":

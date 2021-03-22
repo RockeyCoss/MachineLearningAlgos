@@ -5,3 +5,4 @@ from models.Logistic import Logistic
 from models.MaximumEntropy import MaximumEntropy
 from models.KNN import KNN
 from models.SVM import SVM
+from models.AdaBoost import AdaBoost

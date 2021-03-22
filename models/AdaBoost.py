@@ -6,9 +6,9 @@ from utilities import loadConfigWithName
 
 
 class AdaBoost(ModelBaseClass):
-    def __init__(self,lr=0.01):
+    def __init__(self):
         self.weakClassifiers=[]
-        self.classifierNum=loadConfigWithName("AdaBoostConfig", "classfierNum")
+        self.classifierNum=int(loadConfigWithName("AdaBoostConfig", "classfierNum"))
 
     def train(self, features: np.ndarray, labels: np.ndarray, *args, **dicts):
         weight=np.ones(features.shape[0])*(1/features.shape[0])
@@ -53,7 +53,7 @@ class DesicionStump:
         featuresLabelsWeight=np.concatenate((features,labels.reshape(-1,1),weight.reshape(-1,1)),axis=1)
         globalCurrentMinFault=1
 
-        for column in features.shape[1]:
+        for column in range(features.shape[1]):
             #data preparation
             sortedFeaturesLabelsWeight=np.array(sorted(featuresLabelsWeight, key=lambda x:x[column]))
             sortedLabels= sortedFeaturesLabelsWeight[:, sortedFeaturesLabelsWeight.shape[1] - 2].astype(np.int)

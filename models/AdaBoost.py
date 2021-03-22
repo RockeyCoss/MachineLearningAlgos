@@ -29,27 +29,29 @@ class DesicionStump:
         self.postLabel=0
 
     def train(self,features:np.ndarray,labels:np.ndarray,weight:np.ndarray):
-        featuresPlusLabels=np.insert(features,features.shape[1],labels,axis=1)
-        globalCurrentMinFault=features.shape[0]
+        featuresLabelsWeight=np.concatenate((features,labels.reshape(-1,1),weight.reshape(-1,1)),axis=1)
+        globalCurrentMinFault=np.sum(weight)
         for column in features.shape[1]:
-            sortedFeaturesPLabels=np.array(sorted(featuresPlusLabels,key=lambda x:x[column]))
-            sortedLabels=sortedFeaturesPLabels[:,sortedFeaturesPLabels.shape[1]-1].astype(np.int)
+            sortedFeaturesLabelsWeight=np.array(sorted(featuresLabelsWeight, key=lambda x:x[column]))
+            sortedLabels= sortedFeaturesLabelsWeight[:, sortedFeaturesLabelsWeight.shape[1] - 2].astype(np.int)
+            sortedWeights=sortedFeaturesLabelsWeight[:, sortedFeaturesLabelsWeight.shape[1] - 1]
             #use dynamic programing to find the cut point in O(N) time
-            preState=array.array('b',[1,0] if sortedLabels[0]==-1 else [0,1])
-            counter=collections.Counter(sortedLabels[1:])
-            postState=array.array('b',[counter[-1],counter[1]])
+            preState=array.array('f',[sortedWeights[0],0] if sortedLabels[0]==-1 else [0,sortedWeights[0]])
+            weightSumOfMiuns1=np.sum(sortedWeights[np.where(sortedLabels==-1)])
+            weightSumOf1=1-weightSumOfMiuns1
+            postState=array.array('f',[weightSumOfMiuns1,weightSumOf1])
             preLabel=-1 if np.argmax(preState)==0 else 1
             postLabel=-1 if np.argmax(postState)==0 else 1
             currentMinFault=min(preState)+min(postState)
             currentMinCut=0
             #cutPoint表示分为[:cutPoint+1],[cutPoint+1,:]俩组
             for cutPoint in range(1,sortedLabels.shape[0]):
-                if sortedLabels [cutPoint]==-1:
-                    preState[0]+=1
-                    postState[0]-=1
+                if sortedLabels[cutPoint]==-1:
+                    preState[0]+=sortedWeights[cutPoint]
+                    postState[0]-=sortedWeights[cutPoint]
                 else:
-                    preState[1]+=1
-                    postState[1]-=1
+                    preState[1]+=sortedWeights[cutPoint]
+                    postState[1]-=sortedWeights[cutPoint]
                 currentFault=min(preState)+min(postState)
                 if currentFault<currentMinFault:
                     currentMinFault=currentFault
@@ -58,7 +60,7 @@ class DesicionStump:
                     currentMinCut=cutPoint
             if globalCurrentMinFault>currentMinFault:
                 globalCurrentMinFault=currentMinFault
-                self.cutValue=sortedFeaturesPLabels[currentMinCut,column]
+                self.cutValue=sortedFeaturesLabelsWeight[currentMinCut, column]
                 self.cutColumn=column
                 self.preLabel=preLabel
                 self.postLabel=postLabel

@@ -113,6 +113,10 @@ class DesicionStump:
             labels[np.where(features[:,self.cutColumn]>self.cutValue)]=-1
         return labels
 
+    def __repr__(self):
+        returnString=f"cutValue:{self.cutValue} cutColumn:{self.cutColumn} preLabel:{self.preLabel} postLabel:{self.postLabel}"
+        return returnString
+
     def getState(self)->list:
         return [self.cutValue,self.cutColumn,self.preLabel,self.postLabel]
 

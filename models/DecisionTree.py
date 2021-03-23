@@ -3,10 +3,27 @@ import collections
 import numpy as np
 from models import ModelBaseClass
 # use cart algorithm to generate decision tree
+from utilities import loadConfigWithName
+
 
 class DecisionTree(ModelBaseClass):
+    def __init__(self):
+        self.minSampleNum=int(loadConfigWithName("DecisionTreeConfig", "minSampleNum"))
+        self.giniThreshold=float(loadConfigWithName("DecisionTreeConfig", "giniThreshold"))
+        self.root:Node=None
+
     def train(self, features: np.ndarray, labels: np.ndarray, *args, **dicts):
+        self.root=Node()
+        if features <= self.minSampleNum:
+            self.root.classValue = np.max(labels)
+            # save还没写
+            return
         gini=self.__gini(labels)
+
+
+
+
+
 
     def predict(self, features: np.ndarray):
         super().predict(features)

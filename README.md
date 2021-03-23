@@ -36,15 +36,15 @@ Use the MNIST dataset to validate the algorithms.
 * [SVM](https://github.com/RockeyCoss/MachineLearningAlgos/blob/main/models/SVM.py)
 
   > - Refer to paper  *Sequential Minimal Optimization:A Fast Algorithm for Training Support Vector Machines*
-  > 
+  >
   > - Store the whole kernel function matrix in the memory. To save memory, I may use a LRU cache to store the kernel function matrix in the future. 
-  > 
+  >
   > - Since computing w\*x is time consuming, I store the value of w\*x  of every sample in the memory(as a list) . When updating this list, instead of computing w\*x, I use linear approximation as follows:
   > <img src="https://github.com/RockeyCoss/MachineLearningAlgos/blob/main/README.assets/wxupdate.png" alt="wxupdate" width="227" height="45" />
   >
   > Then, the computation of w\*x can be completely avoided.
   >
-  > 
-
   
+* [AdaBoost](https://github.com/RockeyCoss/MachineLearningAlgos/blob/main/models/AdaBoost.py)
 
+  > + Use decision stump as the weak classifier

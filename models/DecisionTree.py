@@ -24,7 +24,6 @@ class DecisionTree(ModelBaseClass):
 
 
 
-
     def predict(self, features: np.ndarray):
         super().predict(features)
 
@@ -38,6 +37,15 @@ class DecisionTree(ModelBaseClass):
         for key in counter.keys():
             squareSum+=np.power(counter[key]/totalNum,2)
         return 1-squareSum
+
+    def __constructTree(self,features:np.ndarray,labels:np.ndarray):
+        if features <= self.minSampleNum:
+            self.root.classValue = np.max(labels)
+            return
+        gini=self.__gini(labels)
+        for column in range(features.shape[1]):
+            
+
 
 class Node:
     def __init__(self,cutColumn=0,cutValue=0,classValue=0,lChild=None,rChild=None,index=-1):

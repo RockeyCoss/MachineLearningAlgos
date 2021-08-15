@@ -1,8 +1,9 @@
 import importlib
+from typing import Tuple
 
 import numpy as np
 from models import ModelBaseClass
-from utilities import loadConfigWithName, loadData, loadMainConfig
+from utilities import loadConfigWithName, loadData, loadMainConfig, LRUCache
 
 
 # refer to Statistical Learning Methods and
@@ -29,6 +30,7 @@ class SVM(ModelBaseClass):
         self.eps: float = 1e-7
         self.alphay: np.ndarray = None
         self.supportVector: np.ndarray = None
+        self.useLRU = False
 
     def rbf(self, x1, x2):
         """
@@ -50,6 +52,15 @@ class SVM(ModelBaseClass):
 
     def train(self, features: np.ndarray, labels: np.ndarray, *args, **dicts):
         gamma = loadConfigWithName("SVMConfig", "gamma")
+        self.useLRU = loadConfigWithName("SVMConfig","useLRU")
+        if self.useLRU:
+            LRUCapacity = loadConfigWithName("SVMConfig","LRUCapacity")
+            # 因为要更新 wx，每次要用alpha1，alpha2的kernel，所以至少是两倍的样本数，再加上四分之一来
+            # 给其他
+            if LRUCapacity == "auto":
+                LRUCapacity = features.shape[0] * 2 + features.shape[0] //4
+            else:
+                LRUCapacity = int(LRUCapacity)
         if gamma == "auto":
             self.rbfGamma = features.shape[1] if features.shape[1] > 0 else 1
         else:
@@ -59,7 +70,10 @@ class SVM(ModelBaseClass):
         self.b = 0
         self.features = features
         self.labels = labels
-        self.kernelMatrix = self.__getKernelMatrix(self.rbf)
+        if self.useLRU:
+            self.kernelMatrix = LRUofSVM(LRUCapacity,self.rbf,features)
+        else:
+            self.kernelMatrix = self.__getKernelMatrix(self.rbf)
         # hot data
         self.alphaNot0NorC = []
         # the actual time consuming computation
@@ -116,7 +130,7 @@ class SVM(ModelBaseClass):
         if (r2 < -self.epsilon and alpha2 < self.C) or (r2 > self.epsilon and alpha2 > 0):
             # not satisfied
             alphaNot0NorClength = len(self.alphaNot0NorC)
-            indexOfAlpha1Index=-1
+            indexOfAlpha1Index = -1
             if alphaNot0NorClength > 1:
                 alpha1Index = -1
                 # because of the list of alphaNot0NorC, the program doesn't need to spend time computing
@@ -139,7 +153,7 @@ class SVM(ModelBaseClass):
                 start = np.random.randint(low=0, high=alphaNot0NorClength)
                 for delta in range(0, alphaNot0NorClength):
                     indexOfAnotherIndex = (start + delta) % alphaNot0NorClength
-                    if indexOfAlpha1Index!=-1 and indexOfAnotherIndex == indexOfAlpha1Index:
+                    if indexOfAlpha1Index != -1 and indexOfAnotherIndex == indexOfAlpha1Index:
                         continue
                     anotherIndex = self.alphaNot0NorC[indexOfAnotherIndex]
                     if self.__optimize(anotherIndex, sampleIndex):
@@ -166,7 +180,7 @@ class SVM(ModelBaseClass):
         alpha2 = self.alpha[alpha2Index]
         y1 = self.labels[alpha1Index]
         y2 = self.labels[alpha2Index]
-        #may be bugs
+        # may be bugs
         E1 = self.wx[alpha1Index] - self.b - self.labels[alpha1Index]
         E2 = self.wx[alpha2Index] - self.b - self.labels[alpha2Index]
         s = y1 * y2
@@ -245,11 +259,42 @@ class SVM(ModelBaseClass):
         self.alpha[alpha1Index] = a1
         self.alpha[alpha2Index] = a2
         # to reduce computation, use derivative*delta to compute the increment of wx.
-        self.wx += (a1 - alpha1) * self.kernelMatrix[alpha1Index] * self.labels[alpha1Index] + \
+        if self.useLRU:
+            deltaAlpha1 = a1 - alpha1
+            deltaAlpha2 = a2 - alpha2
+            for i in range(self.wx.shape[0]):
+                self.wx[i] += deltaAlpha1 * self.kernelMatrix[alpha1Index,i]*self.labels[alpha1Index] + \
+                    deltaAlpha2 * self.kernelMatrix[alpha2Index,i] * self.labels[alpha2Index]
+        else:
+            self.wx += (a1 - alpha1) * self.kernelMatrix[alpha1Index] * self.labels[alpha1Index] + \
                    (a2 - alpha2) * self.kernelMatrix[alpha2Index] * self.labels[alpha2Index]
+
         # self.wx=np.sum(self.alpha*self.labels*self.kernelMatrix,axis=1)
 
         return True
+
+
+class LRUofSVM(LRUCache):
+
+    def __init__(self, capacity, kernel, features: np.ndarray):
+        self.kernel = kernel
+        self.features = features
+        super(LRUofSVM, self).__init__(capacity)
+
+    def __getitem__(self, item):
+        key = self.__indexTransform(item)
+        value = self.get(key)
+        if not value:
+            value = self.kernel(self.features[key[0]], self.features[key[1]])
+            self.put(key, value)
+        return value
+
+    def __indexTransform(self, key: Tuple[int, int]) -> Tuple[int, int]:
+        if key[1] < key[0]:
+            return (key[1], key[0])
+        else:
+            return key
+
 
 if __name__ == '__main__':
     features, labels = loadData(loadMainConfig("modelName"), "train")

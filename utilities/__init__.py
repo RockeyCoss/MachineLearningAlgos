@@ -2,4 +2,5 @@ from utilities.transform import minusOneAndOneLabelTransform,hogFeature,binaryFe
 from utilities.configLoader import loadMainConfig,loadConfigWithName,loadMultipleConfigWithName
 from utilities.dataLoader import loadData
 from utilities.numericalComputation import BFGSAlgo
+from utilities.LRUCache import LRUCache,DoubleLinkedNode
 

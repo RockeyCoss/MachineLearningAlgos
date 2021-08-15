@@ -4,4 +4,6 @@
     <labelTransform>minusOneAndOneLabelTransform</labelTransform>
     <C>60</C>
     <gamma>auto</gamma>
+    <useLRU>True</useLRU>
+    <LRUCapacity>auto</LRUCapacity>
 </SVM>

@@ -43,8 +43,8 @@ Use the MNIST dataset to validate the algorithms.
   > <img src="https://github.com/RockeyCoss/MachineLearningAlgos/blob/main/README.assets/wxupdate.png" alt="wxupdate" width="227" height="45" />
   >
   > Then, the computation of w\*x can be completely avoided.
-  >
   
 * [AdaBoost](https://github.com/RockeyCoss/MachineLearningAlgos/blob/main/models/AdaBoost.py)
 
   > + Use decision stump as the weak classifier
+

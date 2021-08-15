@@ -1,4 +1,5 @@
 import collections
+import math
 
 import numpy as np
 from models import ModelBaseClass
@@ -66,9 +67,20 @@ class DecisionTree(ModelBaseClass):
             counter=collections.Counter(sortedFeatureBel[1:,1].astype(np.int))
             postState=array('b',[counter[i] if i in counter.keys() else 0 for i in range(self.classNum)])
             #divide the data into [:currentCutPoint+1] and [currentCutPoint+1,:] two parts
+            #state parameter: currentCutPoint,preGini,postGini,preState,postState
             currentCutPoint=0
+            #calculate gini
+            totalNum=features.shape[0]
+            preStateSum = np.sum(preState)
+            postStateSum = np.sum(postState)
+            preSigma=sum([np.power(i,2) for i in preState])
+            postSigma=sum([np.power(i,2) for i in postState])
+
+
+
             currentMinGini = self.__giniDivided(preState,postState,features.shape[0])
             currentMinCut = 0
+
 
 
 
